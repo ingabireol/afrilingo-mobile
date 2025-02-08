@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class SocialButton extends StatelessWidget {
-  final IconData icon;
+  final dynamic icon; // Can be IconData or String (image path)
   final String text;
   final String socialName;
   final bool showBorder;
@@ -18,49 +18,78 @@ class SocialButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      height: 45,
-      decoration: BoxDecoration(
-        border: showBorder ? Border.all(color: Colors.grey[300]!) : null,
-        borderRadius: BorderRadius.circular(8),
-      ),
       child: TextButton(
-        onPressed: onPressed ?? () {},
+        onPressed: onPressed,
         style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
+            side: showBorder
+                ? BorderSide(color: Colors.grey[300]!)
+                : BorderSide.none,
           ),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.grey[700],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: Colors.grey[700],
-              size: 24,
-            ),
+            _buildLeadingWidget(),
             const SizedBox(width: 8),
-            Text(
-              text,
-              style: TextStyle(
-                color: Colors.grey[700],
-                fontSize: 14,
+            Flexible(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 4),
-            Text(
-              socialName,
-              style: TextStyle(
-                color: Colors.grey[700],
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+            Flexible(
+              child: Text(
+                socialName,
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildLeadingWidget() {
+    if (icon is IconData) {
+      return Icon(
+        icon,
+        color: Colors.grey[700],
+        size: 24,
+      );
+    } else if (icon is String) {
+      return Image.asset(
+        icon,
+        width: 24,
+        height: 24,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          print('Error loading image: $error');
+          return const Icon(
+            Icons.error,
+            color: Colors.red,
+            size: 24,
+          );
+        },
+      );
+    }
+    return const SizedBox.shrink();
   }
 }
