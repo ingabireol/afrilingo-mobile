@@ -1,22 +1,38 @@
-import 'package:afrilingo/screens/aboutus.dart';
-import 'package:afrilingo/screens/auth/sign_up.dart';
+import 'package:afrilingo/screens/auth/sign_in_screen.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/auth/social_button.dart';
 
-class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
 
   @override
-  State<SignInScreen> createState() => _SignInScreenState();
+  _SignUpScreenState createState() => _SignUpScreenState();
 }
 
-class _SignInScreenState extends State<SignInScreen> {
+class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   // Validation methods
+  String? _validateName(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your full name';
+    }
+    if (value.length < 2) {
+      return 'Name must be at least 2 characters long';
+    }
+    // Check if name contains only letters and spaces
+    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+      return 'Name can only contain letters and spaces';
+    }
+    return null;
+  }
+
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter an email address';
@@ -30,7 +46,7 @@ class _SignInScreenState extends State<SignInScreen> {
     return null;
   }
 
-  String? _validatePassword(String? value) {
+  String? _validatePassword(String? value, {bool isConfirmPassword = false}) {
     if (value == null || value.isEmpty) {
       return 'Please enter a password';
     }
@@ -54,7 +70,21 @@ class _SignInScreenState extends State<SignInScreen> {
       return 'Password must contain at least one special character';
     }
 
+    // Check if confirm password matches
+    if (isConfirmPassword && value != _passwordController.text) {
+      return 'Passwords do not match';
+    }
+
     return null;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -70,9 +100,19 @@ class _SignInScreenState extends State<SignInScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Back Button
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: IconButton(
+                      icon: Icon(Icons.arrow_back, color: Colors.grey[800]),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+
                   // Header
+                  const SizedBox(height: 20),
                   Text(
-                    'Welcome Back',
+                    'Create Account',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w700,
@@ -82,7 +122,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Sign in to continue your journey',
+                    'Sign up to unlock your personalized experience',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[600],
@@ -97,46 +137,23 @@ class _SignInScreenState extends State<SignInScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _buildInputField(
-                          Icons.email,
-                          'Email',
-                          controller: _emailController,
-                        ),
+                        _buildTextField(
+                            _nameController, 'Full Name', Icons.person),
                         const SizedBox(height: 16),
-                        _buildInputField(
-                          Icons.lock,
-                          'Password',
-                          isPassword: true,
-                          controller: _passwordController,
-                        ),
-
-                        // Forgot Password
+                        _buildTextField(_emailController, 'Email', Icons.email),
                         const SizedBox(height: 16),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: GestureDetector(
-                            onTap: () {},
-                            child: Text(
-                              'Forgot Password?',
-                              style: TextStyle(
-                                color: Color(0xFF5A2D0C),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
+                        _buildPasswordField(
+                            _passwordController, 'Password', true),
+                        const SizedBox(height: 16),
+                        _buildPasswordField(_confirmPasswordController,
+                            'Confirm Password', false),
 
-                        // Sign In Button
+                        // Sign Up Button
                         const SizedBox(height: 32),
                         ElevatedButton(
                           onPressed: () {
                             if (_formKey.currentState!.validate()) {
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      HowDidYouHearAboutUsScreen(),
-                                ),
-                              );
+                              // TODO: Implement sign-up logic
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -149,7 +166,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             elevation: 4,
                           ),
                           child: const Text(
-                            'Sign In',
+                            'Create Account',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -188,26 +205,26 @@ class _SignInScreenState extends State<SignInScreen> {
                       SocialButton(
                         icon: 'assets/google_icon.png',
                         text: 'Google',
-                        socialName: 'Sign in',
+                        socialName: 'Sign up',
                         onPressed: () {},
                       ),
                       const SizedBox(height: 16),
                       SocialButton(
                         icon: 'assets/facebook_icon.png',
                         text: 'Facebook',
-                        socialName: 'Sign in',
+                        socialName: 'Sign up',
                         onPressed: () {},
                       ),
                     ],
                   ),
 
-                  // Sign Up Option
+                  // Sign In Option
                   const SizedBox(height: 32),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Don't have an account? ",
+                        'Already have an account? ',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[700],
@@ -217,12 +234,12 @@ class _SignInScreenState extends State<SignInScreen> {
                         onTap: () {
                           Navigator.of(context).pushReplacement(
                             MaterialPageRoute(
-                              builder: (context) => const SignUpScreen(),
+                              builder: (context) => const SignInScreen(),
                             ),
                           );
                         },
                         child: Text(
-                          'Sign Up',
+                          'Sign In',
                           style: TextStyle(
                             fontSize: 14,
                             color: Color(0xFF5A2D0C),
@@ -241,36 +258,51 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  // Update the input field method to use validation
-  Widget _buildInputField(
-    IconData icon,
-    String hint, {
-    bool isPassword = false,
-    required TextEditingController controller,
-  }) {
+  Widget _buildTextField(
+      TextEditingController controller, String label, IconData icon) {
     return TextFormField(
       controller: controller,
-      obscureText: isPassword ? _obscurePassword : false,
       decoration: InputDecoration(
-        hintText: hint,
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         prefixIcon: Icon(icon),
-        suffixIcon: isPassword
-            ? IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _obscurePassword = !_obscurePassword;
-                  });
-                },
-              )
-            : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+      ),
+      validator: label == 'Full Name'
+          ? _validateName
+          : (label == 'Email' ? _validateEmail : null),
+    );
+  }
+
+  Widget _buildPasswordField(
+      TextEditingController controller, String label, bool isPassword) {
+    return TextFormField(
+      controller: controller,
+      obscureText: isPassword ? _obscurePassword : _obscureConfirmPassword,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        prefixIcon: const Icon(Icons.lock),
+        suffixIcon: IconButton(
+          icon: Icon(
+            isPassword
+                ? (_obscurePassword ? Icons.visibility : Icons.visibility_off)
+                : (_obscureConfirmPassword
+                    ? Icons.visibility
+                    : Icons.visibility_off),
+          ),
+          onPressed: () {
+            setState(() {
+              if (isPassword) {
+                _obscurePassword = !_obscurePassword;
+              } else {
+                _obscureConfirmPassword = !_obscureConfirmPassword;
+              }
+            });
+          },
         ),
       ),
-      validator: isPassword ? _validatePassword : _validateEmail,
+      validator: (value) =>
+          _validatePassword(value, isConfirmPassword: !isPassword),
     );
   }
 }

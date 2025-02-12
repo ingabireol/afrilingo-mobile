@@ -16,13 +16,16 @@ class WelcomeScreen extends StatelessWidget {
           right: 17,
           bottom: 52,
         ),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment(-0.24, -0.97),
-            end: Alignment(0.24, 0.97),
-            colors: [Color(0xFFC78539), Color(0xFF532708), Color(0xB2532708)],
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFC78539), // Light brown (top)
+              Color(0xFF532708), // Dark brown (middle)
+              Color(0xFF2D1505), // Even darker brown (bottom)
+            ],
           ),
-          borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -33,33 +36,34 @@ class WelcomeScreen extends StatelessWidget {
               height: 297,
               decoration: BoxDecoration(
                 image: const DecorationImage(
-                  image: NetworkImage("https://via.placeholder.com/280x297"),
+                  image:
+                      AssetImage('lib/images/Screenshot 2025-02-03 192844.png'),
                   fit: BoxFit.fill,
                 ),
-                borderRadius: BorderRadius.circular(140),
+                borderRadius: BorderRadius.circular(250),
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Afrilingo',
-              style: TextStyle(
-                color: Color(0xFFFFD79D),
-                fontSize: 55,
-                fontFamily: 'DM Serif Display',
-                fontWeight: FontWeight.w400,
-              ),
+              style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    fontFamily: 'DM Serif Display',
+                    color: Color(0xFFFFD79D),
+                    fontSize: 55,
+                    fontWeight: FontWeight.w400,
+                  ),
             ),
             const SizedBox(height: 30),
-            const Text(
+            Text(
               'Connecting You to Africa, One Word at a Time',
-              style: TextStyle(
-                color: Color(0xFFE4DDDD),
-                fontSize: 47,
-                fontFamily: 'DM Serif Display',
-                fontWeight: FontWeight.w400,
-              ),
+              style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    fontFamily: 'DM Serif Display',
+                    color: Color(0xFFE4DDDD).withOpacity(0.9),
+                    fontSize: 47,
+                    fontWeight: FontWeight.w400,
+                  ),
             ),
-            const SizedBox(height: 50),
+            const SizedBox(height: 100),
             GestureDetector(
               onTap: () {
                 Navigator.push(
@@ -67,36 +71,33 @@ class WelcomeScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => const SignInScreen()),
                 );
               },
-              child: Container(
-                width: 396,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(6),
-                  color: Colors.transparent,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Opacity(
-                      opacity: 0.50,
-                      child: const Text(
-                        'Get Started',
-                        style: TextStyle(
-                          color: Color(0xFFF3F1EE),
-                          fontSize: 30,
-                          fontFamily: 'Mulish',
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Get Started',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 40,
+                      fontFamily: 'Mulish',
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(width: 25),
-                    const Icon(
+                  ),
+                  const SizedBox(width: 30),
+                  Container(
+                    width: 55,
+                    height: 55,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFFC78539), // Orange-gold button color
+                    ),
+                    child: const Icon(
                       Icons.arrow_forward,
                       size: 35,
                       color: Colors.white,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],

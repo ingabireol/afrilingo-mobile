@@ -20,14 +20,16 @@ class MyApp extends StatelessWidget {
           secondary: const Color(0xFFDEB887),
         ),
         useMaterial3: true,
-        fontFamily: 'Poppins',
-        textTheme: const TextTheme(
+        fontFamily: 'DM Serif Display', // Set as default font family
+        textTheme: TextTheme(
           displayLarge: TextStyle(
+            fontFamily: 'DM Serif Display',
             fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF8B4513),
+            fontWeight: FontWeight.w400,
+            color: const Color(0xFF8B4513),
           ),
           bodyLarge: TextStyle(
+            fontFamily: 'DM Serif Display', // Apply to body text as well
             fontSize: 16,
             color: Colors.black87,
           ),
