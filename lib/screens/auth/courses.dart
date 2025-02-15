@@ -1,3 +1,4 @@
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 import 'notifications.dart';
@@ -14,7 +15,6 @@ class Courses extends StatefulWidget {
 class _CoursesState
     extends State<Courses> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _currentBottomNavIndex = 0;
 
   @override
   void initState() {
@@ -61,7 +61,7 @@ class _CoursesState
         ),
       ),
       // Bottom Navigation Bar
-      bottomNavigationBar: _buildBottomNavigation(),
+      bottomNavigationBar: const CustomBottomNavigationBar(selectedIndex: 0),
     );
   }
 
@@ -275,26 +275,7 @@ class _CoursesState
     );
   }
 
-  /// Bottom Navigation Bar.
-  Widget _buildBottomNavigation() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: _currentBottomNavIndex,
-      selectedItemColor: const Color(0xFF4A63BF),
-      unselectedItemColor: Colors.grey,
-      onTap: (int index) {
-        setState(() {
-          _currentBottomNavIndex = index;
-        });
-        debugPrint("Bottom Navigation item $index tapped");
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-        BottomNavigationBarItem(icon: Icon(Icons.message), label: ''),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
-        BottomNavigationBarItem(icon: Icon(Icons.settings), label: ''),
-      ],
-    );
+
   }
 
   /// Builds a clickable chapter tile (for the Course Review tab).
@@ -381,5 +362,4 @@ class _CoursesState
         ),
       ),
     );
-  }
 }

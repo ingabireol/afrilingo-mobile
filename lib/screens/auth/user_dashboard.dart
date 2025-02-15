@@ -3,17 +3,25 @@ import 'package:afrilingo/screens/auth/progress.dart';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 
+import '../../widgets/auth/navigation_bar.dart';
 import 'activity.dart';
 import 'courses.dart';
 
-class UserDashboard extends StatelessWidget {
+class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
+
+  @override
+  _UserDashboardState createState() =>_UserDashboardState();
+}
+
+  class _UserDashboardState extends State<UserDashboard> {
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFEFF3FB),
-      bottomNavigationBar: _buildBottomNavigation(),
+      bottomNavigationBar: CustomBottomNavigationBar(selectedIndex: 0),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -88,18 +96,6 @@ class UserDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomNavigation() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFF4A63BF),
-      unselectedItemColor: Colors.grey,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-        BottomNavigationBarItem(icon: Icon(Icons.message), label: ''),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
-        BottomNavigationBarItem(icon: Icon(Icons.settings), label: ''),
-      ],
-    );
   }
 
   Widget _buildMenuGrid(BuildContext context) {
@@ -243,7 +239,7 @@ class UserDashboard extends StatelessWidget {
       ),
     );
   }
-}
+
 
 // Dummy screens for navigation
 class CoursesScreen extends StatelessWidget {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '/widgets/auth/navigation_bar.dart'; // Adjust the path accordingly
 
 class ActivityPage extends StatefulWidget {
   const ActivityPage({super.key});
@@ -8,14 +9,6 @@ class ActivityPage extends StatefulWidget {
 }
 
 class _ActivityPageState extends State<ActivityPage> {
-  int _selectedIndex = 0;
-
-  void _onBottomNavTap(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // Handle bottom navigation tap action here
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,16 +22,16 @@ class _ActivityPageState extends State<ActivityPage> {
               _buildHeader(),
               _buildMotivationalCard(),
               _buildLatestResults(),
-              _buildBottomNavigation(),
+              // Removed the inline bottom navigation bar from here.
             ],
           ),
         ),
       ),
+      // Use the custom navigation bar as the Scaffold's bottomNavigationBar.
+      bottomNavigationBar: CustomBottomNavigationBar(selectedIndex: 0,),
     );
   }
 
-  // Updated header that preserves your original structure but adds a top bar
-  // (with clickable back arrow, centered title, and menu icon) and a blue underline.
   Widget _buildHeader() {
     return Column(
       children: [
@@ -76,6 +69,7 @@ class _ActivityPageState extends State<ActivityPage> {
             IconButton(
               icon: const Icon(Icons.menu, color: Color(0xFF4A63BF)),
               onPressed: () {
+                // Handle menu button press.
               },
             ),
           ],
@@ -107,8 +101,6 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 
-
-  // Motivational card wrapped in InkWell for clickability.
   Widget _buildMotivationalCard() {
     return InkWell(
       onTap: () {
@@ -122,11 +114,11 @@ class _ActivityPageState extends State<ActivityPage> {
             colors: [Color(0xFF5078FC), Color(0xFF715AE5)],
           ),
           borderRadius: BorderRadius.circular(8),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black26, // Adjust opacity if needed.
               blurRadius: 10,
-              offset: const Offset(0, 5),
+              offset: Offset(0, 5),
             ),
           ],
         ),
@@ -164,7 +156,6 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 
-  // Latest Results section with clickable result cards.
   Widget _buildLatestResults() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -188,7 +179,6 @@ class _ActivityPageState extends State<ActivityPage> {
     );
   }
 
-  // Each result card is wrapped in an InkWell for clickability.
   Widget _buildResultCard(String title, String achievement, String day, String date, bool isRed) {
     return InkWell(
       onTap: () {
@@ -246,44 +236,6 @@ class _ActivityPageState extends State<ActivityPage> {
           ],
         ),
       ),
-    );
-  }
-
-  // Bottom Navigation Bar (clickable by default).
-  Widget _buildBottomNavigation() {
-    return BottomNavigationBar(
-      currentIndex: _selectedIndex,
-      onTap: _onBottomNavTap,
-      items: [
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.home,
-            color: _selectedIndex == 0 ? const Color.fromRGBO(74, 99, 191, 1) : Colors.grey,
-          ),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.search,
-            color: _selectedIndex == 1 ? const Color.fromRGBO(74, 99, 191, 1) : Colors.grey,
-          ),
-          label: 'Search',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.notifications,
-            color: _selectedIndex == 2 ? const Color.fromRGBO(74, 99, 191, 1) : Colors.grey,
-          ),
-          label: 'Alerts',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(
-            Icons.person,
-            color: _selectedIndex == 3 ? const Color.fromRGBO(74, 99, 191, 1) : Colors.grey,
-          ),
-          label: 'Profile',
-        ),
-      ],
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../widgets/auth/navigation_bar.dart';
 import 'foodanddrinks.dart';
 
 class FilesPage extends StatefulWidget {
@@ -11,6 +12,7 @@ class FilesPage extends StatefulWidget {
   _FilesPageState createState() => _FilesPageState();
 }
 
+
 class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -20,6 +22,7 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
   final Color unselectedColor = Colors.grey;
   final Color tileBorderColor = const Color(0xFF4A63BF);
   final Color tileShadowColor = const Color(0x40000000);
+
 
   @override
   void initState() {
@@ -93,7 +96,7 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
           _buildEmptyTab('No saved files yet.'),
         ],
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: const CustomBottomNavigationBar(selectedIndex: 1),
     );
   }
 
@@ -194,50 +197,4 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildBottomNav() {
-    return Container(
-      height: 60,
-      color: Colors.white,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.home_outlined, size: 30),
-            color: indicatorColor,
-            onPressed: () {
-              // Handle "Home" navigation tap
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.book_outlined, size: 30),
-            color: indicatorColor,
-            onPressed: () {
-              // Handle "Sets" navigation tap
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline, size: 30),
-            color: indicatorColor,
-            onPressed: () {
-              // Handle "Add" navigation tap
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, size: 30),
-            color: indicatorColor,
-            onPressed: () {
-              // Handle "Chat" navigation tap
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_outline, size: 30),
-            color: indicatorColor,
-            onPressed: () {
-              // Handle "Profile" navigation tap
-            },
-          ),
-        ],
-      ),
-    );
-  }
 }

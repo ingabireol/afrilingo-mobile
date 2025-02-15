@@ -1,4 +1,5 @@
 import 'package:afrilingo/screens/auth/notifications.dart';
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 class ProgressPage extends StatelessWidget {
@@ -8,7 +9,7 @@ class ProgressPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFEFF3FB),
-      bottomNavigationBar: _buildBottomNavigation(),
+      bottomNavigationBar: const CustomBottomNavigationBar(selectedIndex: 0),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -181,32 +182,6 @@ class ProgressPage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildBottomNavigation() {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFF4A63BF),
-      unselectedItemColor: Colors.grey,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: '',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.message),
-          label: '',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: '',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: '',
-        ),
-      ],
     );
   }
 }
