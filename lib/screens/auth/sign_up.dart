@@ -1,5 +1,6 @@
 import 'package:afrilingo/screens/auth/sign_in_screen.dart';
 import 'package:flutter/material.dart';
+
 import '../../widgets/auth/social_button.dart';
 
 class SignUpScreen extends StatefulWidget {

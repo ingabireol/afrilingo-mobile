@@ -11,12 +11,10 @@ class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
 
   @override
-  _UserDashboardState createState() =>_UserDashboardState();
+  _UserDashboardState createState() => _UserDashboardState();
 }
 
-  class _UserDashboardState extends State<UserDashboard> {
-
-
+class _UserDashboardState extends State<UserDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,7 +85,8 @@ class UserDashboard extends StatefulWidget {
             onPressed: () {
               Navigator.push(
                 context,
-              MaterialPageRoute(builder: (context)=> const NotificationsScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const NotificationsScreen()),
               );
             },
           ),
@@ -95,151 +94,150 @@ class UserDashboard extends StatefulWidget {
       ),
     );
   }
+}
 
-  }
+Widget _buildMenuGrid(BuildContext context) {
+  return GridView.count(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    crossAxisCount: 2,
+    crossAxisSpacing: 8,
+    mainAxisSpacing: 8,
+    childAspectRatio: 1.1,
+    children: [
+      _buildMenuCard(context, Icons.menu_book, 'courses'),
+      _buildMenuCard(context, Icons.play_circle_fill, 'progress'),
+      _buildMenuCard(context, Icons.edit, 'Test'),
+      _buildMenuCard(context, Icons.timer, 'Activity'),
+    ],
+  );
+}
 
-  Widget _buildMenuGrid(BuildContext context) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 8,
-      mainAxisSpacing: 8,
-      childAspectRatio: 1.1,
-      children: [
-        _buildMenuCard(context, Icons.menu_book, 'courses'),
-        _buildMenuCard(context, Icons.play_circle_fill, 'progress'),
-        _buildMenuCard(context, Icons.edit, 'Test'),
-        _buildMenuCard(context, Icons.timer, 'Activity'),
-      ],
-    );
-  }
-
-  Widget _buildMenuCard(BuildContext context, IconData icon, String title) {
-    return GestureDetector(
-      onTap: () =>
+Widget _buildMenuCard(BuildContext context, IconData icon, String title) {
+  return GestureDetector(
+    onTap: () =>
         // Navigate to a different screen when the menu card is tapped
         Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => _getDestinationScreen(title)),
-        ),
-      
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.blue, width: 1.5),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 36, color: Colors.blue),
-            const SizedBox(height: 6),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Method to return different screens based on the title
-  Widget _getDestinationScreen(String title) {
-    switch (title) {
-      case 'courses':
-        return const CoursesScreen();
-      case 'progress':
-        return const ProgressScreen();
-      case 'Test':
-        return const TestScreen();
-      case 'Activity':
-        return const ActivityScreen();
-      default:
-        return const Center(child: Text('Unknown Screen'));
-    }
-  }
-
-  Widget _buildProgressBar() {
-    double progress = 0.3;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF5A77FF), Color(0xFFBE5AC8)],
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            "Wow, you're improving!",
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          CircularPercentIndicator(
-            radius: 25,
-            lineWidth: 6,
-            percent: progress,
-            center: Text(
-              "${(progress * 100).round()}%",
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            backgroundColor: Colors.white12,
-            progressColor: Colors.white,
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatsSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      context,
+      MaterialPageRoute(builder: (context) => _getDestinationScreen(title)),
+    ),
+    child: Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 5,
+        border: Border.all(color: Colors.blue, width: 1.5),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 36, color: Colors.blue),
+          const SizedBox(height: 6),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          _buildStatItem('Lessons learned', '12'),
-          _buildStatItem("Today's learning time", '1.5h'),
-          _buildStatItem('Lessons left to learn', '36'),
-        ],
-      ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildStatItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
+// Method to return different screens based on the title
+Widget _getDestinationScreen(String title) {
+  switch (title) {
+    case 'courses':
+      return const CoursesScreen();
+    case 'progress':
+      return const ProgressScreen();
+    case 'Test':
+      return const TestScreen();
+    case 'Activity':
+      return const ActivityScreen();
+    default:
+      return const Center(child: Text('Unknown Screen'));
   }
+}
 
+Widget _buildProgressBar() {
+  double progress = 0.3;
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [Color(0xFF5A77FF), Color(0xFFBE5AC8)],
+      ),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          "Wow, you're improving!",
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        CircularPercentIndicator(
+          radius: 25,
+          lineWidth: 6,
+          percent: progress,
+          center: Text(
+            "${(progress * 100).round()}%",
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          backgroundColor: Colors.white12,
+          progressColor: Colors.white,
+        )
+      ],
+    ),
+  );
+}
+
+Widget _buildStatsSection() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.05),
+          blurRadius: 5,
+        ),
+      ],
+    ),
+    child: Column(
+      children: [
+        _buildStatItem('Lessons learned', '12'),
+        _buildStatItem("Today's learning time", '1.5h'),
+        _buildStatItem('Lessons left to learn', '36'),
+      ],
+    ),
+  );
+}
+
+Widget _buildStatItem(String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        Text(value,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      ],
+    ),
+  );
+}
 
 // Dummy screens for navigation
 class CoursesScreen extends StatelessWidget {

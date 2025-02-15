@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../widgets/auth/notification_card.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -8,7 +9,8 @@ class NotificationsScreen extends StatefulWidget {
   _NotificationsScreenState createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> with SingleTickerProviderStateMixin {
+class _NotificationsScreenState extends State<NotificationsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -58,9 +60,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildNotificationList(),  // Unread Tab
-                _buildNotificationList(),  // Read Tab (use same for now)
-                _buildNotificationList(),  // Archived Tab (use same for now)
+                _buildNotificationList(), // Unread Tab
+                _buildNotificationList(), // Read Tab (use same for now)
+                _buildNotificationList(), // Archived Tab (use same for now)
               ],
             ),
           ),
@@ -76,10 +78,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
         children: [
           NotificationCard(
             title: 'New Feature Alert!',
-            description: "We're pleased to introduce the latest enhancements in our templating experience.",
+            description:
+                "We're pleased to introduce the latest enhancements in our templating experience.",
             timestamp: '14h',
-            avatarUrl: 'https://cdn.builder.io/api/v1/image/assets/TEMP/49881c985c47e523d8a51ba581fe0efe3bdc5d7bcd0f73974abb99541b250b75',
-            iconUrl: 'https://cdn.builder.io/api/v1/image/assets/TEMP/0498b696ee28634c0aa8ce013dcc47ff9e7d3a2047c7173257eacc874daf2f8a',
+            avatarUrl:
+                'https://cdn.builder.io/api/v1/image/assets/TEMP/49881c985c47e523d8a51ba581fe0efe3bdc5d7bcd0f73974abb99541b250b75',
+            iconUrl:
+                'https://cdn.builder.io/api/v1/image/assets/TEMP/0498b696ee28634c0aa8ce013dcc47ff9e7d3a2047c7173257eacc874daf2f8a',
             onTryNowPressed: _handleTryNowPressed,
           ),
           const SizedBox(height: 16),
@@ -87,8 +92,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> with SingleTi
             title: 'Afrilingo',
             description: 'welcome in the best African language learning app',
             timestamp: '14h',
-            avatarUrl: 'https://cdn.builder.io/api/v1/image/assets/TEMP/49881c985c47e523d8a51ba581fe0efe3bdc5d7bcd0f73974abb99541b250b75',
-            iconUrl: 'https://cdn.builder.io/api/v1/image/assets/TEMP/0498b696ee28634c0aa8ce013dcc47ff9e7d3a2047c7173257eacc874daf2f8a',
+            avatarUrl:
+                'https://cdn.builder.io/api/v1/image/assets/TEMP/49881c985c47e523d8a51ba581fe0efe3bdc5d7bcd0f73974abb99541b250b75',
+            iconUrl:
+                'https://cdn.builder.io/api/v1/image/assets/TEMP/0498b696ee28634c0aa8ce013dcc47ff9e7d3a2047c7173257eacc874daf2f8a',
             onTryNowPressed: _handleTryNowPressed,
           ),
         ],

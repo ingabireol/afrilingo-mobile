@@ -52,7 +52,8 @@ class ProgressPage extends StatelessWidget {
         children: [
           const CircleAvatar(
             radius: 30,
-            backgroundImage: AssetImage('assets/profile.jpg'), // Change as needed
+            backgroundImage:
+                AssetImage('assets/profile.jpg'), // Change as needed
           ),
           const SizedBox(width: 12),
           const Column(
@@ -78,8 +79,10 @@ class ProgressPage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.notifications, color: Colors.black),
             onPressed: () {
-              Navigator.push(context,
-              MaterialPageRoute(builder: (context)=>  const NotificationsScreen()),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const NotificationsScreen()),
               );
             },
           ),

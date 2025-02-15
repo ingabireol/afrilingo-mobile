@@ -12,8 +12,7 @@ class Courses extends StatefulWidget {
   _CoursesState createState() => _CoursesState();
 }
 
-class _CoursesState
-    extends State<Courses> with SingleTickerProviderStateMixin {
+class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -99,7 +98,8 @@ class _CoursesState
               onPressed: () {
                 Navigator.push(
                   context,
-                MaterialPageRoute(builder:  (context)=> const NotificationsScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const NotificationsScreen()),
                 );
               },
             ),
@@ -117,7 +117,7 @@ class _CoursesState
                   // Tapping a tab will update the TabBarView automatically.
                   setState(() {}); // Trigger rebuild if needed.
                 },
-                indicatorColor: const Color.fromRGBO(0,110, 150, 1),
+                indicatorColor: const Color.fromRGBO(0, 110, 150, 1),
                 indicatorWeight: 2,
                 labelColor: Colors.black,
                 unselectedLabelColor: Colors.black54,
@@ -156,7 +156,7 @@ class _CoursesState
                   title: 'Important Phrases in Kinyarwanda',
                   color: const Color.fromRGBO(252, 124, 108, 0.39),
                   imageUrl:
-                  'https://cdn.builder.io/api/v1/image/assets/TEMP/2b14c4bce83d00b08e536caa51d8a3cbacc01ca3eef32e2b0fe8cd9b52baddc4',
+                      'https://cdn.builder.io/api/v1/image/assets/TEMP/2b14c4bce83d00b08e536caa51d8a3cbacc01ca3eef32e2b0fe8cd9b52baddc4',
                   onTap: () => debugPrint("Chapter 1 tapped"),
                 ),
                 const SizedBox(height: 13),
@@ -165,7 +165,7 @@ class _CoursesState
                   title: 'Introductions in Kinyarwanda',
                   color: const Color.fromRGBO(86, 123, 243, 0.49),
                   imageUrl:
-                  'https://cdn.builder.io/api/v1/image/assets/TEMP/dfc79d4f9709cb7bbbef48c8f0f954d1014def763439c3dd6a912538a91a40fe',
+                      'https://cdn.builder.io/api/v1/image/assets/TEMP/dfc79d4f9709cb7bbbef48c8f0f954d1014def763439c3dd6a912538a91a40fe',
                   onTap: () => debugPrint("Chapter 2 tapped"),
                 ),
               ],
@@ -181,7 +181,7 @@ class _CoursesState
                   title: 'More essential Phrases',
                   color: const Color.fromRGBO(79, 75, 69, 0.54),
                   imageUrl:
-                  'https://cdn.builder.io/api/v1/image/assets/TEMP/c2689b060ad59efb4a351a3b823513141c3605cf0dc153330685f40c891c49fe',
+                      'https://cdn.builder.io/api/v1/image/assets/TEMP/c2689b060ad59efb4a351a3b823513141c3605cf0dc153330685f40c891c49fe',
                   onTap: () => debugPrint("Chapter 3 tapped"),
                 ),
                 const SizedBox(height: 13),
@@ -190,7 +190,7 @@ class _CoursesState
                   title: 'Simple adjectives and numbers',
                   color: const Color.fromRGBO(178, 103, 134, 0.31),
                   imageUrl:
-                  'https://cdn.builder.io/api/v1/image/assets/TEMP/ebf22147e24521155f8951add819f403fd34566dfa3a863f14396249f162d682',
+                      'https://cdn.builder.io/api/v1/image/assets/TEMP/ebf22147e24521155f8951add819f403fd34566dfa3a863f14396249f162d682',
                   onTap: () => debugPrint("Chapter 4 tapped"),
                 ),
                 const SizedBox(height: 13),
@@ -199,7 +199,7 @@ class _CoursesState
                   title: 'Verbs and Tenses',
                   color: const Color.fromRGBO(88, 40, 5, 0.48),
                   imageUrl:
-                  'https://cdn.builder.io/api/v1/image/assets/TEMP/123a4b229fc09fd69a5154988df2fc0bb7db81b1483a1ceb00173f7e9bfdfc85',
+                      'https://cdn.builder.io/api/v1/image/assets/TEMP/123a4b229fc09fd69a5154988df2fc0bb7db81b1483a1ceb00173f7e9bfdfc85',
                   onTap: () => debugPrint("Chapter 5 tapped"),
                 ),
                 const SizedBox(height: 13),
@@ -208,7 +208,7 @@ class _CoursesState
                   title: 'Common expresions and preoverbs',
                   color: const Color.fromRGBO(244, 213, 149, 0.77),
                   imageUrl:
-                  'https://cdn.builder.io/api/v1/image/assets/TEMP/b0a56aece2fbb64dc6cf0f89bcd43a26f2e432fa33180f9d901a808ed374a5ee',
+                      'https://cdn.builder.io/api/v1/image/assets/TEMP/b0a56aece2fbb64dc6cf0f89bcd43a26f2e432fa33180f9d901a808ed374a5ee',
                   onTap: () => debugPrint("Chapter 6 tapped"),
                 ),
               ],
@@ -235,7 +235,8 @@ class _CoursesState
                   fontWeight: FontWeight.w700,
                   color: Color.fromRGBO(0, 0, 0, 0.28),
                 ),
-                prefixIcon: const Icon(Icons.search, size: 28, color: Colors.grey),
+                prefixIcon:
+                    const Icon(Icons.search, size: 28, color: Colors.grey),
                 filled: true,
                 fillColor: const Color.fromRGBO(196, 196, 196, 0.27),
                 border: OutlineInputBorder(
@@ -274,92 +275,90 @@ class _CoursesState
       ),
     );
   }
+}
 
-
-  }
-
-  /// Builds a clickable chapter tile (for the Course Review tab).
-  Widget _buildChapterTile({
-    required String chapter,
-    required String title,
-    required Color color,
-    required String imageUrl,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        height: 90,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color: color,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 23),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Chapter text and title.
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Chapter $chapter',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
-                  ),
-                ),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
-                  ),
-                ),
-              ],
-            ),
-            // Chapter icon image.
-            Image.network(
-              imageUrl,
-              width: 50,
-              fit: BoxFit.contain,
-            ),
-          ],
-        ),
+/// Builds a clickable chapter tile (for the Course Review tab).
+Widget _buildChapterTile({
+  required String chapter,
+  required String title,
+  required Color color,
+  required String imageUrl,
+  required VoidCallback onTap,
+}) {
+  return InkWell(
+    onTap: onTap,
+    child: Container(
+      height: 90,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: color,
       ),
-    );
-  }
-
-  /// Builds a clickable category item (for the Categories tab).
-  Widget _buildCategoryItem(String title) {
-    return InkWell(
-      onTap: () => debugPrint("$title tapped"),
-      child: Container(
-        height: 60,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color: Colors.white,
-          border: Border.all(
-            color: const Color.fromRGBO(0, 0, 0, 0.6),
-            width: 1,
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 23),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Chapter text and title.
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Chapter $chapter',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
+                ),
               ),
-            ),
-            const Icon(Icons.chevron_right),
-          ],
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
+                ),
+              ),
+            ],
+          ),
+          // Chapter icon image.
+          Image.network(
+            imageUrl,
+            width: 50,
+            fit: BoxFit.contain,
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Builds a clickable category item (for the Categories tab).
+Widget _buildCategoryItem(String title) {
+  return InkWell(
+    onTap: () => debugPrint("$title tapped"),
+    child: Container(
+      height: 60,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white,
+        border: Border.all(
+          color: const Color.fromRGBO(0, 0, 0, 0.6),
+          width: 1,
         ),
       ),
-    );
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
+            ),
+          ),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+    ),
+  );
 }

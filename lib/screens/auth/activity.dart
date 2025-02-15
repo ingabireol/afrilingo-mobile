@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '/widgets/auth/navigation_bar.dart'; // Adjust the path accordingly
 
 class ActivityPage extends StatefulWidget {
@@ -9,7 +10,6 @@ class ActivityPage extends StatefulWidget {
 }
 
 class _ActivityPageState extends State<ActivityPage> {
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,7 +28,9 @@ class _ActivityPageState extends State<ActivityPage> {
         ),
       ),
       // Use the custom navigation bar as the Scaffold's bottomNavigationBar.
-      bottomNavigationBar: CustomBottomNavigationBar(selectedIndex: 0,),
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 0,
+      ),
     );
   }
 
@@ -170,16 +172,21 @@ class _ActivityPageState extends State<ActivityPage> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildResultCard('Travel', 'Achievement : 45/50', 'Sunday', '17/03/2021', false),
-          _buildResultCard('Conversation', 'Achievement : 12/38', 'Friday', '10/03/2021', true),
-          _buildResultCard('Speaking', 'Achievement : 26/40', 'Wednesday', '06/03/2021', false),
-          _buildResultCard('Reading', 'Achievement : 40/69', 'Saturday', '01/03/2021', false),
+          _buildResultCard(
+              'Travel', 'Achievement : 45/50', 'Sunday', '17/03/2021', false),
+          _buildResultCard('Conversation', 'Achievement : 12/38', 'Friday',
+              '10/03/2021', true),
+          _buildResultCard('Speaking', 'Achievement : 26/40', 'Wednesday',
+              '06/03/2021', false),
+          _buildResultCard('Reading', 'Achievement : 40/69', 'Saturday',
+              '01/03/2021', false),
         ],
       ),
     );
   }
 
-  Widget _buildResultCard(String title, String achievement, String day, String date, bool isRed) {
+  Widget _buildResultCard(
+      String title, String achievement, String day, String date, bool isRed) {
     return InkWell(
       onTap: () {
         // Handle tap on result card.

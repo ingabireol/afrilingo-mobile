@@ -1,13 +1,14 @@
 import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
-
 // Adjust these colors to match your screenshot EXACTLY
-const Color kPinkBorderColor = Color(0xFF546CC3);     // Pink border & button
-const Color kLightPinkBgColor = Color(0xFFE0E0E0);    // Light-pink background for cards
-const Color kGradientStart = Color.fromRGBO(0,110, 150, 1);       // Gradient start (pink)
-const Color kGradientEnd   = Color(0xFF546CC3);       // Gradient end (purple-ish)
-const Color kGreyProgress  = Color(0xFFE0E0E0);       // Background of the progress bar
+const Color kPinkBorderColor = Color(0xFF546CC3); // Pink border & button
+const Color kLightPinkBgColor =
+    Color(0xFFE0E0E0); // Light-pink background for cards
+const Color kGradientStart =
+    Color.fromRGBO(0, 110, 150, 1); // Gradient start (pink)
+const Color kGradientEnd = Color(0xFF546CC3); // Gradient end (purple-ish)
+const Color kGreyProgress = Color(0xFFE0E0E0); // Background of the progress bar
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -38,7 +39,10 @@ class ProfilePage extends StatelessWidget {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.only(
-                      left: 16, right: 16, top: 16, bottom: 16,
+                      left: 16,
+                      right: 16,
+                      top: 16,
+                      bottom: 16,
                     ),
                     child: Column(
                       children: [
@@ -70,8 +74,8 @@ class ProfilePage extends StatelessWidget {
                               radius: 50,
                               backgroundImage: NetworkImage(
                                 'https://cdn.builder.io/api/v1/image/assets/TEMP/'
-                                    'f92e89ea3117bf9bc67a88d11f22f0474d7b0024321d2a4212768483bcce68c4'
-                                    '?placeholderIfAbsent=true&apiKey=116c718011a3489b93103e46cb1ee39c',
+                                'f92e89ea3117bf9bc67a88d11f22f0474d7b0024321d2a4212768483bcce68c4'
+                                '?placeholderIfAbsent=true&apiKey=116c718011a3489b93103e46cb1ee39c',
                               ),
                             ),
                             Positioned(
@@ -196,7 +200,8 @@ class ProfilePage extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Streaks', style: TextStyle(fontSize: 14)),
+                            const Text('Streaks',
+                                style: TextStyle(fontSize: 14)),
                             Row(
                               children: [
                                 const Text(
@@ -225,7 +230,8 @@ class ProfilePage extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Points', style: TextStyle(fontSize: 14)),
+                            const Text('Points',
+                                style: TextStyle(fontSize: 14)),
                             Row(
                               children: [
                                 const Text(
@@ -282,7 +288,8 @@ class ProfilePage extends StatelessWidget {
                         child: const Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Name', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('Name',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
                             SizedBox(height: 4),
                             Text('Shakilla Ishimwe'),
                           ],
@@ -298,7 +305,8 @@ class ProfilePage extends StatelessWidget {
                         child: const Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Email', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('Email',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
                             SizedBox(height: 4),
                             Text('shaks@gmail.com'),
                           ],
@@ -314,7 +322,8 @@ class ProfilePage extends StatelessWidget {
                         child: const Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Password', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text('Password',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
                             SizedBox(height: 4),
                             Text('.....'),
                           ],

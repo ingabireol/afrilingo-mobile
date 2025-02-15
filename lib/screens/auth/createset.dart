@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:afrilingo/screens/auth/files_page.dart';
+import 'package:flutter/material.dart';
 
 class CreateSetPage extends StatelessWidget {
   const CreateSetPage({super.key});
@@ -19,7 +19,11 @@ class CreateSetPage extends StatelessWidget {
             icon: const Icon(Icons.check, color: Colors.black),
             onPressed: () {
               // Handle save action
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const FilesPage(initialTabIndex: 1)));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          const FilesPage(initialTabIndex: 1)));
             },
           ),
         ],
@@ -62,24 +66,21 @@ class CreateSetPage extends StatelessWidget {
                     term: 'Term',
                     description: 'Description , Translation',
                     isHighlighted: false,
-                    onEdit: () {
-                    },
+                    onEdit: () {},
                   ),
                   const SizedBox(height: 20),
                   _buildVocabularyBox(
                     term: 'Term',
                     description: 'Description , Translation',
                     isHighlighted: false,
-                    onEdit: () {
-                    },
+                    onEdit: () {},
                   ),
                   const SizedBox(height: 20),
                   _buildVocabularyBox(
                     term: 'Term',
                     description: 'Description , Translation',
                     isHighlighted: false,
-                    onEdit: () {
-                    },
+                    onEdit: () {},
                   ),
                 ],
               ),
@@ -100,16 +101,17 @@ class CreateSetPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: isHighlighted ? Border.all(color: Colors.black, width: 2) : null,
+        border:
+            isHighlighted ? Border.all(color: Colors.black, width: 2) : null,
         boxShadow: isHighlighted
             ? null
             : [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -132,9 +134,11 @@ class CreateSetPage extends StatelessWidget {
                   ),
                 ),
                 GestureDetector(
-                  onTap: onEdit,
-                  child: IconButton(onPressed: (){}, icon: const Icon (Icons.edit, size: 24, color: Colors.black54))
-                ),
+                    onTap: onEdit,
+                    child: IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.edit,
+                            size: 24, color: Colors.black54))),
               ],
             ),
           ),

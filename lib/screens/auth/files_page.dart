@@ -6,14 +6,14 @@ import 'foodanddrinks.dart';
 class FilesPage extends StatefulWidget {
   final int initialTabIndex;
 
-  const FilesPage({super.key, this.initialTabIndex=0});
+  const FilesPage({super.key, this.initialTabIndex = 0});
 
   @override
   _FilesPageState createState() => _FilesPageState();
 }
 
-
-class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMixin {
+class _FilesPageState extends State<FilesPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   final Color scaffoldBgColor = const Color(0xFFF5F5F5);
@@ -23,11 +23,11 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
   final Color tileBorderColor = const Color(0xFF4A63BF);
   final Color tileShadowColor = const Color(0x40000000);
 
-
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this, initialIndex: widget.initialTabIndex);
+    _tabController = TabController(
+        length: 3, vsync: this, initialIndex: widget.initialTabIndex);
   }
 
   @override
@@ -70,7 +70,10 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.menu, color: Color(0xFF4A63BF),),
+            icon: const Icon(
+              Icons.menu,
+              color: Color(0xFF4A63BF),
+            ),
             onPressed: () {
               // Handle menu tap
             },
@@ -111,7 +114,8 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
           children: [
             _buildGridItem(title: 'Colors', iconData: Icons.palette),
             _buildGridItem(title: 'Numbers', iconData: Icons.numbers),
-            _buildGridItem(title: 'Body parts', iconData: Icons.accessibility_new),
+            _buildGridItem(
+                title: 'Body parts', iconData: Icons.accessibility_new),
             _buildGridItem(
               title: 'Food&Drinks',
               iconData: Icons.fastfood,
@@ -136,11 +140,8 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
         borderRadius: BorderRadius.circular(15),
         onTap: () {
           if (title == 'Colors') {
-
           } else if (title == 'Numbers') {
-
           } else if (title == 'Body parts') {
-
           } else if (title == 'Food&Drinks') {
             Navigator.push(
               context,
@@ -158,7 +159,8 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
-            border: hasBorder ? Border.all(color: tileBorderColor, width: 4) : null,
+            border:
+                hasBorder ? Border.all(color: tileBorderColor, width: 4) : null,
             boxShadow: [
               BoxShadow(
                 color: tileShadowColor,
@@ -187,7 +189,6 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
     );
   }
 
-
   Widget _buildEmptyTab(String message) {
     return Center(
       child: Text(
@@ -196,5 +197,4 @@ class _FilesPageState extends State<FilesPage> with SingleTickerProviderStateMix
       ),
     );
   }
-
 }

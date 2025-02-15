@@ -105,8 +105,8 @@ class FoodAndDrinks extends StatelessWidget {
       onPressed: () {
         // Handle button press
         Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CreateSetPage()),
+          context,
+          MaterialPageRoute(builder: (context) => const CreateSetPage()),
         );
       },
       child: const Row(
