@@ -4,7 +4,7 @@ import '../screens/why.dart';
 import '../screens/levelofUser.dart';
 
 class HowDidYouHearAboutUsScreen extends StatefulWidget {
-  const HowDidYouHearAboutUsScreen({Key? key}) : super(key: key);
+  const HowDidYouHearAboutUsScreen({super.key});
 
   @override
   _HowDidYouHearAboutUsScreenState createState() =>

@@ -5,7 +5,7 @@ import '../screens/why.dart';
 class Levelofuser extends StatefulWidget {
   final String? hearAboutUsOption;
 
-  const Levelofuser({Key? key, this.hearAboutUsOption}) : super(key: key);
+  const Levelofuser({super.key, this.hearAboutUsOption});
 
   @override
   State<Levelofuser> createState() => _LevelofuserState();

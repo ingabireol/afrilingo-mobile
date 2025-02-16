@@ -6,7 +6,7 @@ class GoalScreen extends StatefulWidget {
   final String levelOfUser;
   final String whyOption;
 
-  GoalScreen({
+  const GoalScreen({super.key, 
     required this.hearAboutUsOption,
     required this.levelOfUser,
     required this.whyOption,

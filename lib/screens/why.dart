@@ -7,10 +7,10 @@ class WhyScreen extends StatefulWidget {
   final String levelOfUser;
 
   const WhyScreen({
-    Key? key,
+    super.key,
     required this.hearAboutUsOption,
     required this.levelOfUser,
-  }) : super(key: key);
+  });
 
   @override
   _WhyScreenState createState() => _WhyScreenState();
