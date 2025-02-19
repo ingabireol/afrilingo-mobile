@@ -43,7 +43,7 @@ class ProgressPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 5,
           ),
         ],
@@ -122,7 +122,7 @@ class ProgressPage extends StatelessWidget {
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: 0.6,
-            backgroundColor: Colors.white.withValues(alpha: 0.3),
+            backgroundColor: Colors.white.withOpacity(0.3),
             valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
           ),
           const SizedBox(height: 4),
@@ -164,7 +164,7 @@ class ProgressPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 5,
           ),
         ],
