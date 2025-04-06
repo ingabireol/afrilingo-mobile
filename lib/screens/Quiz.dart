@@ -1,6 +1,8 @@
 // quiz_start_screen.dart
 import 'package:flutter/material.dart';
 
+import 'multiplechoice.dart';
+
 class QuizStartScreen extends StatelessWidget {
   const QuizStartScreen({super.key});
 
@@ -28,7 +30,13 @@ class QuizStartScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             InkWell(
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                    builder: (context) => const MultipleChoiceScreen()),
+                );
+              },
               child: Container(
                 width: 64,
                 height: 64,

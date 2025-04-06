@@ -68,6 +68,10 @@ flutter:
   assets:
     - assets/google_icon.png
     - assets/facebook_icon.png
+    - assets/fruit_image.png
+    - assets/House.PNG
+    - assets/Sun.PNG
+    - assets/Inka.PNG
     - lib/images/Screenshot 2025-02-03 192844.png
   #   - images/a_dot_ham.jpeg
 
