@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screens/auth/sign_in_screen.dart';
-import '../screens/why.dart';
+
 import '../screens/levelofUser.dart';
 
 class HowDidYouHearAboutUsScreen extends StatefulWidget {

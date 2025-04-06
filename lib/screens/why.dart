@@ -1,6 +1,6 @@
 import 'package:afrilingo/screens/goal.dart';
 import 'package:flutter/material.dart';
-import '../screens/auth/sign_in_screen.dart';
+//import '../screens/auth/sign_in_screen.dart';
 
 class WhyScreen extends StatefulWidget {
   final String hearAboutUsOption;

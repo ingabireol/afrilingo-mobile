@@ -1,6 +1,8 @@
 import 'package:afrilingo/screens/aboutus.dart';
 import 'package:afrilingo/screens/auth/sign_up.dart';
 import 'package:flutter/material.dart';
+import 'package:afrilingo/services/auth_service.dart';
+
 import '../../widgets/auth/social_button.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -15,6 +17,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  final _authService = AuthService();
 
   // Validation methods
   String? _validateEmail(String? value) {
@@ -129,14 +132,38 @@ class _SignInScreenState extends State<SignInScreen> {
                         // Sign In Button
                         const SizedBox(height: 32),
                         ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             if (_formKey.currentState!.validate()) {
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      HowDidYouHearAboutUsScreen(),
-                                ),
-                              );
+                              try {
+                                final response = await _authService.signIn(
+                                  _emailController.text,
+                                  _passwordController.text,
+                                );
+                                // Handle successful login
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Login successful!'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const HowDidYouHearAboutUsScreen(),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(e.toString()),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(

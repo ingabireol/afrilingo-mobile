@@ -1,5 +1,5 @@
-import 'package:afrilingo/screens/welcome_screen.dart';
 import 'package:flutter/material.dart';
+import 'auth/user_dashboard.dart';
 
 class GoalScreen extends StatefulWidget {
   final String hearAboutUsOption;
@@ -73,7 +73,7 @@ class _GoalScreenState extends State<GoalScreen> {
                 _buildNextButton(
                   context: context,
                   selectedOption: _selectedOption,
-                  nextScreen: WelcomeScreen(),
+                  nextScreen: UserDashboard(),
                 ),
               ],
             ),

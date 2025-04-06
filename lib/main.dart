@@ -8,6 +8,7 @@ import 'package:afrilingo/screens/spelling_page.dart';
 import 'package:afrilingo/screens/translate_page.dart';
 import 'package:afrilingo/screens/words.dart';
 import 'package:flutter/material.dart';
+
 import 'screens/welcome_screen.dart';
 
 import 'screens/goal.dart';
