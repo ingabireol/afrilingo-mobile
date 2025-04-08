@@ -1,7 +1,7 @@
 // quiz_start_screen.dart
 import 'package:flutter/material.dart';
 
-import 'multiplechoice.dart';
+import 'quizpage1.dart';
 
 class QuizStartScreen extends StatelessWidget {
   const QuizStartScreen({super.key});

@@ -79,6 +79,8 @@ flutter:
     - assets/House.PNG
     - assets/Sun.PNG
     - assets/Inka.PNG
+    - assets/Hill.png
+    - assets/Strawberry.png
     - lib/images/Screenshot 2025-02-03 192844.png
   #   - images/a_dot_ham.jpeg
 

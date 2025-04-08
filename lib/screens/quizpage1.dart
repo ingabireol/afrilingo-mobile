@@ -1,4 +1,5 @@
 // multiple_choice_screen.dart
+import 'package:afrilingo/screens/quizpage2.dart';
 import 'package:flutter/material.dart';
 
 class MultipleChoiceScreen extends StatefulWidget {
@@ -144,7 +145,12 @@ class _MultipleChoiceScreenState extends State<MultipleChoiceScreen> {
 
                         // Next button - Keeping the brown theme
                         ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {              Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const SpellingPage()),
+                          );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFC78539), // Brown color
                             minimumSize: const Size(100, 36), // Slightly smaller height

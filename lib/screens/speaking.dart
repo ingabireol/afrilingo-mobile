@@ -1,5 +1,4 @@
-// File: lib/screens/speaking_screen.dart
-
+import 'package:afrilingo/screens/writing.dart';
 import 'package:flutter/material.dart';
 
 class SpeakingScreen extends StatefulWidget {
@@ -12,129 +11,194 @@ class SpeakingScreen extends StatefulWidget {
 class _SpeakingScreenState extends State<SpeakingScreen> {
   bool isRecording = false;
   bool hasRecorded = false;
-  String currentPhrase = 'How are you?';
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Speaking-Kinyarwanda'),
+        title: const Text(
+          'Speaking-Kinyarwanda',
+          style: TextStyle(
+            fontSize: 18,
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: true,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.brown[800]!,
+                const Color(0xFFD2B48C),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white, size: 20),
+            onPressed: () {},
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SafeArea(
         child: Column(
           children: [
-            // Phrase card
-            Card(
-              elevation: 4,
-              child: Padding(
+            Expanded(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Say this phrase in Kinyarwanda',
+                      'Say that phrase in kinyarwanda',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey,
+                        color: Colors.brown,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      currentPhrase,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'How are you',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Unneze ute?',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Color(0xFFD2B48C),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'Shakilla',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.grey[200],
+                                  ),
+                                  child: const Icon(
+                                    Icons.person,
+                                    size: 16,
+                                    color: Colors.brown,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    // Listen to correct pronunciation
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.volume_up),
-                      label: const Text('Listen to correct pronunciation'),
-                      onPressed: () {
-                        // Here you would play the audio
-                      },
+                    const SizedBox(height: 24),
+                    Center(
+                      child: Column(
+                        children: [
+                          GestureDetector(
+                            onTapDown: (_) => setState(() => isRecording = true),
+                            onTapUp: (_) => setState(() => isRecording = false),
+                            child: Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.grey[100],
+                                border: Border.all(
+                                  color: Colors.grey[400]!,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Icon(
+                                isRecording ? Icons.mic : Icons.mic_none,
+                                color: Colors.brown,
+                                size: 30,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Hold to speak and release to send',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.brown,
+                            ),
+                          ),
+                          if (isRecording)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                'Recording...',
+                                style: TextStyle(
+                                  color: const Color(0xFFD2B48C),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-
-            const Spacer(),
-
-            // Recording section
-            Column(
-              children: [
-                // Recording status
-                Text(
-                  isRecording ? 'Recording...' : 'Press and hold to record',
-                  style: TextStyle(
-                    color: isRecording ? Colors.red : Colors.grey,
+            // Smaller Next button centered
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
+              child: SizedBox(
+                width: 120, // Reduced width
+                height: 40,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const WritingScreen()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.brown[600],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
+                  child: const Text('Next'),
                 ),
-                const SizedBox(height: 20),
-                
-                // Record button
-                GestureDetector(
-                  onTapDown: (_) => setState(() => isRecording = true),
-                  onTapUp: (_) => setState(() {
-                    isRecording = false;
-                    hasRecorded = true;
-                  }),
-                  onTapCancel: () => setState(() => isRecording = false),
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isRecording ? Colors.red : Colors.blue,
-                    ),
-                    child: Icon(
-                      isRecording ? Icons.mic : Icons.mic_none,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(height: 20),
-                
-                // Playback and submit
-                if (hasRecorded) ...[
-                  // Play recorded audio
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Play your recording'),
-                    onPressed: () {
-                      // Here you would play the recorded audio
-                    },
-                  ),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Submit button
-                  ElevatedButton(
-                    onPressed: () {
-                      // Here you would submit the recording for review
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Recording submitted for review!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                    child: const Text('Submit'),
-                  ),
-                ],
-              ],
+              ),
             ),
-            const SizedBox(height: 40),
           ],
         ),
       ),
+      // Removed bottomNavigationBar as requested
     );
   }
 }

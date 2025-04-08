@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'Quiz.dart';
+
 class CongratulationsScreen extends StatelessWidget {
   const CongratulationsScreen({super.key});
 
@@ -95,7 +97,11 @@ class CongratulationsScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {        Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const QuizStartScreen()),
+                    );},
                     child: const Text(
                       'Take another round',
                       style: TextStyle(
