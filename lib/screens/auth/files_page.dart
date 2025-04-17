@@ -18,9 +18,9 @@ class _FilesPageState extends State<FilesPage>
 
   final Color scaffoldBgColor = const Color(0xFFF5F5F5);
   final Color appBarBgColor = Colors.white;
-  final Color indicatorColor = const Color(0xFF4A63BF);
+  final Color indicatorColor = const Color(0xFF8B4513);
   final Color unselectedColor = Colors.grey;
-  final Color tileBorderColor = const Color(0xFF4A63BF);
+  final Color tileBorderColor = const Color(0xFF8B4513);
   final Color tileShadowColor = const Color(0x40000000);
 
   @override
@@ -41,8 +41,8 @@ class _FilesPageState extends State<FilesPage>
         iconTheme: IconThemeData(color: indicatorColor),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(30),
-            bottomRight: Radius.circular(30),
+            bottomLeft: Radius.circular(10),
+            bottomRight: Radius.circular(10),
           ),
         ),
         title: const Column(
@@ -50,7 +50,7 @@ class _FilesPageState extends State<FilesPage>
             Text(
               'Shakilla Ishimwe',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Noto Sans Devanagari UI',
                 color: Colors.black,
@@ -72,7 +72,7 @@ class _FilesPageState extends State<FilesPage>
           IconButton(
             icon: const Icon(
               Icons.menu,
-              color: Color(0xFF4A63BF),
+              color: Color((0xFF8B4513)),
             ),
             onPressed: () {
               // Handle menu tap
@@ -105,7 +105,7 @@ class _FilesPageState extends State<FilesPage>
 
   Widget _buildGridSection() {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(5.0),
       child: Center(
         child: Wrap(
           alignment: WrapAlignment.center,

@@ -6,6 +6,7 @@ import 'package:percent_indicator/circular_percent_indicator.dart';
 import '../../widgets/auth/navigation_bar.dart';
 import 'activity.dart';
 import 'courses.dart';
+import 'package:afrilingo/screens/chatbotScreenState.dart';
 
 class UserDashboard extends StatefulWidget {
   const UserDashboard({super.key});
@@ -19,21 +20,23 @@ class _UserDashboardState extends State<UserDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFEFF3FB),
-      bottomNavigationBar: CustomBottomNavigationBar(selectedIndex: 0),
+      bottomNavigationBar: const CustomBottomNavigationBar(selectedIndex: 0),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 16),
                 _buildHeader(context),
-                const SizedBox(height: 16),
-                _buildMenuGrid(context), // Pass context to the method
-                const SizedBox(height: 16),
+                const SizedBox(height: 32),
+                _buildMenuGrid(context), 
+                const SizedBox(height: 24),
                 _buildProgressBar(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 _buildStatsSection(),
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -44,44 +47,39 @@ class _UserDashboardState extends State<UserDashboard> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            icon: const Icon(Icons.arrow_back, color: Colors.black, size: 28),
             onPressed: () => Navigator.pop(context),
           ),
           const CircleAvatar(
-            radius: 30,
-            backgroundImage: AssetImage('assets/profile.jpg'),
+            radius: 40,
+            backgroundImage: AssetImage('lib/images/profile.jpg'),
           ),
-          const SizedBox(width: 12),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Hi, Shaks!',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                'What would you like to look into today',
-                style: TextStyle(fontSize: 14, color: Colors.black54),
-              ),
-            ],
+          const SizedBox(width: 16),
+          const Text(
+            'Hi, Shaks!',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black),
+            icon: const Icon(Icons.notifications, color: Colors.black, size: 30),
             onPressed: () {
               Navigator.push(
                 context,
@@ -101,49 +99,60 @@ Widget _buildMenuGrid(BuildContext context) {
     shrinkWrap: true,
     physics: const NeverScrollableScrollPhysics(),
     crossAxisCount: 2,
-    crossAxisSpacing: 8,
-    mainAxisSpacing: 8,
+    crossAxisSpacing: 16,
+    mainAxisSpacing: 16,
     childAspectRatio: 1.1,
     children: [
       _buildMenuCard(context, Icons.menu_book, 'courses'),
       _buildMenuCard(context, Icons.play_circle_fill, 'progress'),
       _buildMenuCard(context, Icons.edit, 'Test'),
       _buildMenuCard(context, Icons.timer, 'Activity'),
+      _buildMenuCard(context, Icons.chat, 'Chatbot'),
     ],
   );
 }
 
 Widget _buildMenuCard(BuildContext context, IconData icon, String title) {
-  return GestureDetector(
-    onTap: () =>
-        // Navigate to a different screen when the menu card is tapped
-        Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => _getDestinationScreen(title)),
+  return Card(
+    elevation: 4,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
     ),
-    child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue, width: 1.5),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 36, color: Colors.blue),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+    child: InkWell(
+      onTap: () {
+        // Navigate to the corresponding screen based on the title
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => _getDestinationScreen(title),
           ),
-        ],
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 48,
+              color: Colors.blue,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
 }
 
-// Method to return different screens based on the title
 Widget _getDestinationScreen(String title) {
   switch (title) {
     case 'courses':
@@ -154,6 +163,9 @@ Widget _getDestinationScreen(String title) {
       return const TestScreen();
     case 'Activity':
       return const ActivityScreen();
+    case 'Chatbot':
+      // Use the correct ChatbotScreen class from the imported file
+      return const ChatbotScreen();
     default:
       return const Center(child: Text('Unknown Screen'));
   }
@@ -163,12 +175,21 @@ Widget _buildProgressBar() {
   double progress = 0.3;
   return Container(
     width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
     decoration: BoxDecoration(
       gradient: const LinearGradient(
         colors: [Color(0xFF5A77FF), Color(0xFFBE5AC8)],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
       ),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF5A77FF).withOpacity(0.3),
+          blurRadius: 8,
+          offset: const Offset(0, 4),
+        ),
+      ],
     ),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -176,24 +197,27 @@ Widget _buildProgressBar() {
         const Text(
           "Wow, you're improving!",
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
         CircularPercentIndicator(
-          radius: 25,
-          lineWidth: 6,
+          radius: 36,
+          lineWidth: 8,
           percent: progress,
           center: Text(
             "${(progress * 100).round()}%",
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
           ),
-          backgroundColor: Colors.white12,
+          backgroundColor: Colors.white24,
           progressColor: Colors.white,
+          animation: true,
+          animationDuration: 1000,
         )
       ],
     ),
@@ -203,39 +227,62 @@ Widget _buildProgressBar() {
 Widget _buildStatsSection() {
   return Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(12),
+    padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
           color: Colors.black.withOpacity(0.05),
-          blurRadius: 5,
+          blurRadius: 8,
+          offset: const Offset(0, 4),
         ),
       ],
     ),
     child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildStatItem('Lessons learned', '12'),
-        _buildStatItem("Today's learning time", '1.5h'),
-        _buildStatItem('Lessons left to learn', '36'),
+        const Text(
+          'Your Stats',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildStatItem('Completed', '12'),
+            _buildStatItem('In Progress', '3'),
+            _buildStatItem('Points', '1,240'),
+          ],
+        ),
       ],
     ),
   );
 }
 
 Widget _buildStatItem(String label, String value) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-        Text(value,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-      ],
-    ),
+  return Column(
+    children: [
+      Text(
+        value,
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF8B4513),
+        ),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        label,
+        style: TextStyle(
+          fontSize: 16,
+          color: Colors.grey[600],
+        ),
+      ),
+    ],
   );
 }
 

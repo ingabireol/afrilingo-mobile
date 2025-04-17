@@ -1,3 +1,4 @@
+
 import 'package:afrilingo/screens/aboutus.dart';
 import 'package:afrilingo/screens/auth/sign_up.dart';
 import 'package:flutter/material.dart';
@@ -119,7 +120,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           alignment: Alignment.centerRight,
                           child: GestureDetector(
                             onTap: () {},
-                            child: Text(
+                            child: const Text(
                               'Forgot Password?',
                               style: TextStyle(
                                 color: Color(0xFF5A2D0C),
@@ -167,7 +168,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF5A2D0C),
+                            backgroundColor: const Color(0xFF5A2D0C),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -248,7 +249,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             ),
                           );
                         },
-                        child: Text(
+                        child: const Text(
                           'Sign Up',
                           style: TextStyle(
                             fontSize: 14,

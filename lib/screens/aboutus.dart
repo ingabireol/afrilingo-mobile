@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../screens/levelofUser.dart';
 
 class HowDidYouHearAboutUsScreen extends StatefulWidget {
-  const HowDidYouHearAboutUsScreen({Key? key}) : super(key: key);
+  const HowDidYouHearAboutUsScreen({super.key});
 
   @override
   _HowDidYouHearAboutUsScreenState createState() =>
@@ -28,7 +28,7 @@ class _HowDidYouHearAboutUsScreenState
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
+                const Text(
                   'How did you hear about us ? ',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -85,13 +85,13 @@ class _HowDidYouHearAboutUsScreenState
       children: [
         _buildDot(Colors.black),
         const SizedBox(width: 10),
-        _buildDot(Color(0xFF080808)),
+        _buildDot(const Color(0xFF080808)),
         const SizedBox(width: 10),
         _buildDot(Colors.black),
         const SizedBox(width: 10),
-        _buildDot(Color(0xFFC4C4C4)),
+        _buildDot(const Color(0xFFC4C4C4)),
         const SizedBox(width: 10),
-        _buildDot(Color(0xFFC4C4C4)),
+        _buildDot(const Color(0xFFC4C4C4)),
       ],
     );
   }
@@ -102,7 +102,7 @@ class _HowDidYouHearAboutUsScreenState
       height: 10,
       decoration: ShapeDecoration(
         color: color,
-        shape: StadiumBorder(),
+        shape: const StadiumBorder(),
       ),
     );
   }
@@ -117,11 +117,11 @@ class _HowDidYouHearAboutUsScreenState
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: ShapeDecoration(
-          color: isSelected ? Color(0xFF582805) : Color(0xBFD6C3B5),
+          color: isSelected ? const Color(0xFF582805) : const Color(0xBFD6C3B5),
           shape: RoundedRectangleBorder(
             side: isSelected
                 ? BorderSide.none
-                : BorderSide(width: 1, color: Color(0xFF582805)),
+                : const BorderSide(width: 1, color: Color(0xFF582805)),
             borderRadius: BorderRadius.circular(12),
           ),
         ),
@@ -135,7 +135,7 @@ class _HowDidYouHearAboutUsScreenState
               child: Text(
                 text,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Color(0xFF582805),
+                  color: isSelected ? Colors.white : const Color(0xFF582805),
                   fontSize: 24,
                   fontFamily: 'DM Serif Display',
                   fontWeight: FontWeight.w400,
@@ -164,14 +164,14 @@ class _HowDidYouHearAboutUsScreenState
             }
           : null,
       style: ElevatedButton.styleFrom(
-        backgroundColor: Color(0xFF582805),
+        backgroundColor: const Color(0xFF582805),
         foregroundColor: Colors.white,
-        minimumSize: Size(double.infinity, 56),
+        minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      child: Text(
+      child: const Text(
         'Next',
         style: TextStyle(
           fontSize: 18,

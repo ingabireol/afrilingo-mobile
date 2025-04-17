@@ -19,7 +19,7 @@ class TranslationPage extends StatelessWidget {
       body: const Center(
         child: Text('Translation Page - Coming Soon!'),
       ),
-      bottomNavigationBar: CustomBottomNavigationBar(
+      bottomNavigationBar: const CustomBottomNavigationBar(
         selectedIndex: 2,
       ),
     );

@@ -159,7 +159,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               try {
                                 final names = _nameController.text.split(' ');
                                 final firstName = names.first;
-                                final lastName = names.length > 1 ? names.last : '';
+                                final lastName =
+                                    names.length > 1 ? names.last : '';
 
                                 final response = await _authService.signUp(
                                   firstName,
@@ -172,13 +173,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Registration successful! Please sign in.'),
+                                      content: Text(
+                                          'Registration successful! Please sign in.'),
                                       backgroundColor: Colors.green,
                                     ),
                                   );
                                   Navigator.pushReplacement(
                                     context,
-                                    MaterialPageRoute(builder: (context) => const SignInScreen()),
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const SignInScreen()),
                                   );
                                 }
                               } catch (e) {
@@ -194,7 +198,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF5A2D0C),
+                            backgroundColor: const Color(0xFF5A2D0C),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -275,7 +279,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             ),
                           );
                         },
-                        child: Text(
+                        child: const Text(
                           'Sign In',
                           style: TextStyle(
                             fontSize: 14,

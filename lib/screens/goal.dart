@@ -6,7 +6,7 @@ class GoalScreen extends StatefulWidget {
   final String levelOfUser;
   final String whyOption;
 
-  GoalScreen({
+  const GoalScreen({super.key, 
     required this.hearAboutUsOption,
     required this.levelOfUser,
     required this.whyOption,
@@ -33,7 +33,7 @@ class _GoalScreenState extends State<GoalScreen> {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
+                const Text(
                   'What is your goal?',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -73,7 +73,7 @@ class _GoalScreenState extends State<GoalScreen> {
                 _buildNextButton(
                   context: context,
                   selectedOption: _selectedOption,
-                  nextScreen: UserDashboard(),
+                  nextScreen: const UserDashboard(),
                 ),
               ],
             ),
@@ -89,7 +89,7 @@ class _GoalScreenState extends State<GoalScreen> {
       children: [
         _buildDot(Colors.black),
         const SizedBox(width: 10),
-        _buildDot(Color(0xFF080808)),
+        _buildDot(const Color(0xFF080808)),
         const SizedBox(width: 10),
         _buildDot(Colors.black),
         const SizedBox(width: 10),
@@ -106,7 +106,7 @@ class _GoalScreenState extends State<GoalScreen> {
       height: 10,
       decoration: ShapeDecoration(
         color: color,
-        shape: StadiumBorder(),
+        shape: const StadiumBorder(),
       ),
     );
   }
@@ -121,11 +121,11 @@ class _GoalScreenState extends State<GoalScreen> {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: ShapeDecoration(
-          color: isSelected ? Color(0xFF582805) : Color(0xBFD6C3B5),
+          color: isSelected ? const Color(0xFF582805) : const Color(0xBFD6C3B5),
           shape: RoundedRectangleBorder(
             side: isSelected
                 ? BorderSide.none
-                : BorderSide(width: 1, color: Color(0xFF582805)),
+                : const BorderSide(width: 1, color: Color(0xFF582805)),
             borderRadius: BorderRadius.circular(12),
           ),
         ),
@@ -139,7 +139,7 @@ class _GoalScreenState extends State<GoalScreen> {
               child: Text(
                 text,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Color(0xFF582805),
+                  color: isSelected ? Colors.white : const Color(0xFF582805),
                   fontSize: 24,
                   fontFamily: 'DM Serif Display',
                   fontWeight: FontWeight.w400,
@@ -169,15 +169,15 @@ class _GoalScreenState extends State<GoalScreen> {
           : null,
       style: ElevatedButton.styleFrom(
         backgroundColor:
-            selectedOption.isNotEmpty ? Color(0xFF582805) : Colors.white,
+            selectedOption.isNotEmpty ? const Color(0xFF582805) : Colors.white,
         foregroundColor:
-            selectedOption.isNotEmpty ? Colors.white : Color(0xFF582805),
-        minimumSize: Size(double.infinity, 56),
+            selectedOption.isNotEmpty ? Colors.white : const Color(0xFF582805),
+        minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      child: Text(
+      child: const Text(
         'Next',
         style: TextStyle(
           fontSize: 18,
