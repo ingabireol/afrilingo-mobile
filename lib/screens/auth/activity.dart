@@ -28,7 +28,7 @@ class _ActivityPageState extends State<ActivityPage> {
         ),
       ),
       // Use the custom navigation bar as the Scaffold's bottomNavigationBar.
-      bottomNavigationBar: CustomBottomNavigationBar(
+      bottomNavigationBar: const CustomBottomNavigationBar(
         selectedIndex: 0,
       ),
     );

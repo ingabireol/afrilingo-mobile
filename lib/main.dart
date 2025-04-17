@@ -37,12 +37,12 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
         fontFamily: 'DM Serif Display', // Set as default font family
-        textTheme: TextTheme(
+        textTheme: const TextTheme(
           displayLarge: TextStyle(
             fontFamily: 'DM Serif Display',
             fontSize: 32,
             fontWeight: FontWeight.w400,
-            color: const Color(0xFF8B4513),
+            color: Color(0xFF8B4513),
           ),
           bodyLarge: TextStyle(
             fontFamily: 'DM Serif Display', // Apply to body text as well

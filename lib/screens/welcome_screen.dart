@@ -49,7 +49,7 @@ class WelcomeScreen extends StatelessWidget {
               'Afrilingo',
               style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontFamily: 'DM Serif Display',
-                    color: Color(0xFFFFD79D),
+                    color: const Color(0xFFFFD79D),
                     fontSize: 55,
                     fontWeight: FontWeight.w400,
                   ),
@@ -59,7 +59,7 @@ class WelcomeScreen extends StatelessWidget {
               'Connecting You to Africa, One Word at a Time',
               style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontFamily: 'DM Serif Display',
-                    color: Color(0xFFE4DDDD).withOpacity(0.9),
+                    color: const Color(0xFFE4DDDD).withOpacity(0.9),
                     fontSize: 47,
                     fontWeight: FontWeight.w400,
                   ),

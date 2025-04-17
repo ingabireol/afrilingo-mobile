@@ -9,14 +9,14 @@ class NotificationCard extends StatelessWidget {
   final VoidCallback onTryNowPressed;
 
   const NotificationCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.description,
     required this.timestamp,
     required this.avatarUrl,
     required this.iconUrl,
     required this.onTryNowPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
