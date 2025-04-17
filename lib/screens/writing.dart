@@ -1,3 +1,4 @@
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 class WritingScreen extends StatefulWidget {
@@ -43,7 +44,7 @@ class _WritingScreenState extends State<WritingScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {},
+                      onPressed: () => Navigator.pop(context),
                     ),
                     IconButton(
                       icon: const Icon(Icons.notifications_none, color: Colors.white),
@@ -171,6 +172,9 @@ class _WritingScreenState extends State<WritingScreen> {
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 0,
       ),
     );
   }

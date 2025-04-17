@@ -1,3 +1,4 @@
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 import 'listening.dart';
@@ -61,39 +62,12 @@ class TranslationScreen extends StatelessWidget {
               ),
 
               const Spacer(),
-
-              // Next Button (solid brown, no gradient)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const ListeningScreen()),
-                  );},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF8D6E63), // Solid brown
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    elevation: 4,
-                    shadowColor: Colors.black.withOpacity(0.25),
-                  ),
-                  child: const Text(
-                    'Next',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 2,
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 import 'congratspage.dart';
@@ -187,34 +188,12 @@ class TranslationPage extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.home_outlined, color: Colors.grey),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.bar_chart_outlined, color: Colors.grey),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.star_outline, color: Colors.grey),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.person_outline, color: Colors.grey),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.settings_outlined, color: Colors.grey),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 0,
       ),
     );
   }

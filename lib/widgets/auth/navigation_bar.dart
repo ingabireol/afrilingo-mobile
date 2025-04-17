@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../screens/auth/challenges.dart';
+import 'package:afrilingo/screens/levelselection.dart';
 import '../../screens/auth/files_page.dart';
 import '../../screens/auth/profile.dart';
-import '../../screens/auth/translate.dart';
+import '../../screens/translating.dart';
 import '../../screens/auth/user_dashboard.dart';
 
 class CustomBottomNavigationBar extends StatelessWidget {
@@ -26,9 +26,9 @@ class CustomBottomNavigationBar extends StatelessWidget {
       case 1:
         return const FilesPage();
       case 2:
-        return const TranslationPage();
+        return const TranslationScreen();
       case 3:
-        return const ChallengesPage();
+        return const LevelSelectionScreen();();
       case 4:
         return const ProfilePage();
       default:

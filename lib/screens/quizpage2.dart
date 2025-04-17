@@ -1,4 +1,5 @@
 import 'package:afrilingo/screens/writing.dart';
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 import 'quizpage3.dart';
@@ -344,49 +345,11 @@ class _SpellingPageState extends State<SpellingPage> {
                 ),
               ),
             ),
-
-
-            // Footer
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.home_outlined, color: Colors.grey),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.bar_chart_outlined, color: Colors.grey),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.star_outline, color: Colors.grey),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.person_outline, color: Colors.grey),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.settings_outlined, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
+      ),
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 0,
       ),
     );
   }

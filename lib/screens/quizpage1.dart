@@ -1,5 +1,6 @@
 // multiple_choice_screen.dart
 import 'package:afrilingo/screens/quizpage2.dart';
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 class MultipleChoiceScreen extends StatefulWidget {
@@ -173,27 +174,12 @@ class _MultipleChoiceScreenState extends State<MultipleChoiceScreen> {
                   ),
                 ),
               ),
-
-              // Bottom navigation with brown theme
-              Container(
-                height: 50, // Smaller height
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildNavItem(Icons.home_outlined),
-                    _buildNavItem(Icons.folder_outlined),
-                    _buildNavItem(Icons.settings_outlined),
-                    _buildNavItem(Icons.person_outlined),
-                    _buildNavItem(Icons.more_horiz),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 2,
       ),
     );
   }
@@ -235,17 +221,6 @@ class _MultipleChoiceScreenState extends State<MultipleChoiceScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon) {
-    return IconButton(
-      icon: Icon(
-        icon,
-        color: const Color(0xFF532708).withOpacity(0.7),
-        size: 22, // Smaller icons
-      ),
-      onPressed: () {},
     );
   }
 }

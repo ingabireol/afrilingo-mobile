@@ -1,3 +1,4 @@
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 import 'completion.dart';
@@ -170,6 +171,9 @@ class _WordMatchingScreenState extends State<WordMatchingScreen> {
             const SizedBox(height: 24),
           ],
         ),
+      ),
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 3,
       ),
     );
   }

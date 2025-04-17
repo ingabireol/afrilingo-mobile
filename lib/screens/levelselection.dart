@@ -1,3 +1,5 @@
+import 'package:afrilingo/screens/wordmatching.dart';
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 class LevelSelectionScreen extends StatelessWidget {
@@ -103,10 +105,12 @@ class LevelSelectionScreen extends StatelessWidget {
               Expanded(
                 child: CurvedLevelPath(),
               ),
-              const BottomNavigationBar(),
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 3,
       ),
     );
   }
@@ -185,11 +189,20 @@ class CurvedLevelPath extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                LevelCircle(
+                GestureDetector(
+                  child: LevelCircle(
                   level: 1,
                   isActive: true,
                   icon: Icons.cases_rounded,
-                ),
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const WordMatchingScreen()),
+                );
+              },
+            ),
               ],
             ),
             Row(
@@ -446,24 +459,4 @@ class CurvedPathPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
-}
-
-class BottomNavigationBar extends StatelessWidget {
-  const BottomNavigationBar({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Icon(Icons.home_outlined, color: Colors.grey),
-          Icon(Icons.grid_view_outlined, color: Colors.grey),
-          Icon(Icons.emoji_events_outlined, color: Colors.grey),
-          Icon(Icons.person_outline, color: Colors.grey),
-        ],
-      ),
-    );
-  }
 }

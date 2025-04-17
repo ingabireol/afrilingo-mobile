@@ -1,3 +1,4 @@
+import 'package:afrilingo/screens/auth/user_dashboard.dart';
 import 'package:flutter/material.dart';
 
 import 'Quiz.dart';
@@ -97,7 +98,8 @@ class CongratulationsScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: TextButton(
-                    onPressed: () {        Navigator.push(
+                    onPressed: () {
+                      Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (context) => const QuizStartScreen()),
@@ -121,7 +123,13 @@ class CongratulationsScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const UserDashboard()),
+                    );
+                    },
                     child: const Text(
                       'Finish',
                       style: TextStyle(

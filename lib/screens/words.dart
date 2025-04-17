@@ -1,4 +1,6 @@
+import 'package:afrilingo/screens/listening.dart';
 import 'package:afrilingo/screens/translating.dart';
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 class WordScreen extends StatefulWidget {
@@ -156,7 +158,7 @@ class _WordScreenState extends State<WordScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const TranslationScreen()),
+                              builder: (context) => const ListeningScreen()),
                         );
                       },
                       style: ElevatedButton.styleFrom(
@@ -178,6 +180,9 @@ class _WordScreenState extends State<WordScreen> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 0,
       ),
     );
   }

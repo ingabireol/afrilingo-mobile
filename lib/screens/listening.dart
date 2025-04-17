@@ -1,4 +1,5 @@
 import 'package:afrilingo/screens/speaking.dart';
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 class ListeningScreen extends StatefulWidget {
@@ -185,6 +186,9 @@ class _ListeningScreenState extends State<ListeningScreen> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 0,
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'package:afrilingo/screens/levelselection.dart';
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 class CompletionScreen extends StatelessWidget {
@@ -95,7 +97,12 @@ class CompletionScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 48),
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LevelSelectionScreen()),
+);
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           minimumSize: const Size(200, 48),
@@ -119,29 +126,8 @@ class CompletionScreen extends StatelessWidget {
           ),
         ),
       ),
-      // Proper bottom navigation bar implementation
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2D1505),
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.grey,
-        currentIndex: 0,
-        onTap: (index) {
-          // Handle navigation bar item taps
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book),
-            label: 'Learn',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 3,
       ),
     );
   }

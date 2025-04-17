@@ -34,6 +34,7 @@ class ProfileScreen extends StatelessWidget {
                         icon: const Icon(Icons.close, color: Colors.white),
                         onPressed: () {
                           // Handle close button tap
+                          Navigator.pop(context); // Close the profile screen
                         },
                       ),
                     ),

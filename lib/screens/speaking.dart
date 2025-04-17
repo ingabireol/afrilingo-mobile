@@ -1,4 +1,5 @@
 import 'package:afrilingo/screens/writing.dart';
+import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
 class SpeakingScreen extends StatefulWidget {
@@ -198,7 +199,9 @@ class _SpeakingScreenState extends State<SpeakingScreen> {
           ],
         ),
       ),
-      // Removed bottomNavigationBar as requested
+      bottomNavigationBar: CustomBottomNavigationBar(
+        selectedIndex: 0,
+      ),
     );
   }
 }
