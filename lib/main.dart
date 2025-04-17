@@ -1,7 +1,22 @@
+import 'package:afrilingo/screens/quizpage3.dart';
+import 'package:afrilingo/screens/Quiz.dart';
+import 'package:afrilingo/screens/completion.dart';
+import 'package:afrilingo/screens/congratspage.dart';
+import 'package:afrilingo/screens/levelselection.dart';
+import 'package:afrilingo/screens/listening.dart';
+import 'package:afrilingo/screens/quizpage1.dart';
+import 'package:afrilingo/screens/profile.dart';
+import 'package:afrilingo/screens/speaking.dart';
+import 'package:afrilingo/screens/quizpage2.dart';
+import 'package:afrilingo/screens/translating.dart';
+import 'package:afrilingo/screens/words.dart';
+import 'package:afrilingo/screens/wordmatching.dart';
+import 'package:afrilingo/screens/writing.dart';
 import 'package:flutter/material.dart';
 
 import 'screens/welcome_screen.dart';
 
+import 'screens/goal.dart';
 void main() {
   runApp(const MyApp());
 }
@@ -36,7 +51,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const WelcomeScreen(),
+      home: const SpeakingScreen(),
     );
   }
 }
