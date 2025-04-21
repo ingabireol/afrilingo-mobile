@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:afrilingo/services/auth_service.dart';
 
 import '../../widgets/auth/social_button.dart';
+import 'package:afrilingo/screens/auth/user_dashboard.dart'; // Add this import
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -148,10 +149,10 @@ class _SignInScreenState extends State<SignInScreen> {
                                       backgroundColor: Colors.green,
                                     ),
                                   );
+                                  // Navigate to UserDashboard instead of HowDidYouHearAboutUsScreen
                                   Navigator.of(context).pushReplacement(
                                     MaterialPageRoute(
-                                      builder: (context) =>
-                                          const HowDidYouHearAboutUsScreen(),
+                                      builder: (context) => const UserDashboard(),
                                     ),
                                   );
                                 }

@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class DeepSeekService {
-  final String _apiKey;
   final String _baseUrl = 'https://openrouter.ai/api/v1';
+  // Default API key that can be overridden
+  static const String _defaultApiKey = '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';
+  final String _apiKey;
 
-  DeepSeekService() : _apiKey = dotenv.env['OPENROUTER_API_KEY'] ?? '' {
+  DeepSeekService() : _apiKey = dotenv.env['OPENROUTER_API_KEY'] ?? _defaultApiKey {
     if (_apiKey.isEmpty) {
-      throw Exception('OpenRouter API Key is not set. Please check your .env file.');
+      throw Exception('OpenRouter API Key is not set.');
     }
   }
 
@@ -113,4 +115,4 @@ Genzura ibikurikira:
       'Urakora iki? (What do you do?)',
     ];
   }
-} 
+}

@@ -157,39 +157,37 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           onPressed: () async {
                             if (_formKey.currentState!.validate()) {
                               try {
+                                // Split the full name into first and last name
                                 final names = _nameController.text.split(' ');
                                 final firstName = names.first;
-                                final lastName =
-                                    names.length > 1 ? names.last : '';
-
+                                final lastName = names.length > 1 ? names.last : '';
+                                
+                                // Call the signUp method with the correct parameters
                                 final response = await _authService.signUp(
                                   firstName,
                                   lastName,
                                   _emailController.text,
                                   _passwordController.text,
                                 );
-
+                                
                                 // Handle successful registration
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text(
-                                          'Registration successful! Please sign in.'),
+                                      content: Text('Registration successful! Please sign in.'),
                                       backgroundColor: Colors.green,
                                     ),
                                   );
                                   Navigator.pushReplacement(
                                     context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const SignInScreen()),
+                                    MaterialPageRoute(builder: (context) => const SignInScreen()),
                                   );
                                 }
                               } catch (e) {
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text(e.toString()),
+                                      content: Text('Registration failed: ${e.toString()}'),
                                       backgroundColor: Colors.red,
                                     ),
                                   );

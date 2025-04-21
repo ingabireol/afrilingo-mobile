@@ -160,9 +160,12 @@ class _GoalScreenState extends State<GoalScreen> {
     return ElevatedButton(
       onPressed: selectedOption.isNotEmpty
           ? () {
-              Navigator.of(context).push(
+              // Extract just the goal time (e.g., "5min" from "casual 5min")
+              String goalTime = selectedOption.trim().split(' ').last;
+              
+              Navigator.of(context).pushReplacement(
                 MaterialPageRoute(
-                  builder: (context) => nextScreen,
+                  builder: (context) => const UserDashboard(),
                 ),
               );
             }
