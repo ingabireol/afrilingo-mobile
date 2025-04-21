@@ -1,5 +1,5 @@
+import 'package:afrilingo/screens/auth/profile.dart';
 import 'package:flutter/material.dart';
-
 import 'screens/welcome_screen.dart';
 
 void main() {
@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const WelcomeScreen(),
+      home: const ProfilePage(),
     );
   }
 }
