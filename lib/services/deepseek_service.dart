@@ -4,7 +4,7 @@ import 'dart:convert';
 class DeepSeekService {
   final String _baseUrl = 'https://openrouter.ai/api/v1';
   // Default API key - Replace this with your actual DeepSeek API key
-  static const String defaultApiKey = 'sk-or-v1-317d8f35e4a68d3f8cbf1f1a0f5c9c4c6b7a9e8d7f6e5d4c3b2a1908070605';
+  static const String defaultApiKey = sk-or-v1-317d8f35e4a68d3f8cbf1f1a0f5c9c4c6b7a9e8d7f6e5d4c3b2a1908070605;
   final String _apiKey;
 
   // Constructor that uses default API key if none provided
