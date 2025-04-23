@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:afrilingo/services/auth_service.dart';
 
 import '../../widgets/auth/social_button.dart';
-import 'package:afrilingo/screens/auth/user_dashboard.dart'; // Add this import
+import 'package:afrilingo/screens/auth/user_dashboard.dart';
+import 'package:afrilingo/screens/admin/admin_dashboard.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -149,10 +150,13 @@ class _SignInScreenState extends State<SignInScreen> {
                                       backgroundColor: Colors.green,
                                     ),
                                   );
-                                  // Navigate to UserDashboard instead of HowDidYouHearAboutUsScreen
+                                  // Check user role and navigate accordingly
+                                  final isAdminUser = await _authService.isAdmin();
                                   Navigator.of(context).pushReplacement(
                                     MaterialPageRoute(
-                                      builder: (context) => const UserDashboard(),
+                                      builder: (context) => isAdminUser
+                                          ? const AdminDashboard()
+                                          : const UserDashboard(),
                                     ),
                                   );
                                 }

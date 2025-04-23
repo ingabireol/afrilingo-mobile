@@ -8,15 +8,17 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        padding: const EdgeInsets.only(
-          top: 51,
-          left: 17,
-          right: 17,
-          bottom: 52,
-        ),
+      body: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height,
+          ),
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.of(context).size.width * 0.05,
+              vertical: MediaQuery.of(context).size.height * 0.06,
+            ),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -29,12 +31,13 @@ class WelcomeScreen extends StatelessWidget {
           ),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: 280,
-              height: 297,
+              width: MediaQuery.of(context).size.width * 0.6,
+              height: MediaQuery.of(context).size.width * 0.6,
               decoration: BoxDecoration(
                 image: const DecorationImage(
                   image:
@@ -50,7 +53,7 @@ class WelcomeScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontFamily: 'DM Serif Display',
                     color: const Color(0xFFFFD79D),
-                    fontSize: 55,
+                    fontSize: MediaQuery.of(context).size.width * 0.08,
                     fontWeight: FontWeight.w400,
                   ),
             ),
@@ -60,11 +63,11 @@ class WelcomeScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.displayLarge?.copyWith(
                     fontFamily: 'DM Serif Display',
                     color: const Color(0xFFE4DDDD).withOpacity(0.9),
-                    fontSize: 47,
+                    fontSize: MediaQuery.of(context).size.width * 0.08,
                     fontWeight: FontWeight.w400,
                   ),
             ),
-            const SizedBox(height: 100),
+            SizedBox(height: MediaQuery.of(context).size.height * 0.08),
             GestureDetector(
               onTap: () {
                 Navigator.push(
@@ -79,22 +82,22 @@ class WelcomeScreen extends StatelessWidget {
                     'Get Started',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.5),
-                      fontSize: 40,
+                      fontSize: MediaQuery.of(context).size.width * 0.07,
                       fontFamily: 'Mulish',
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(width: 30),
                   Container(
-                    width: 55,
-                    height: 55,
+                    width: MediaQuery.of(context).size.width * 0.11,
+                    height: MediaQuery.of(context).size.width * 0.11,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Color(0xFFC78539), // Orange-gold button color
                     ),
                     child: const Icon(
                       Icons.arrow_forward,
-                      size: 35,
+                      size: 24,
                       color: Colors.white,
                     ),
                   ),
@@ -104,6 +107,7 @@ class WelcomeScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
+      ),
+    ));
   }
 }

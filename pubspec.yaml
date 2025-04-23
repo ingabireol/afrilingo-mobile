@@ -22,8 +22,18 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.3
 
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^3.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
 flutter:
   fonts:
     - family: DM Serif Display
@@ -41,6 +51,12 @@ flutter:
   assets:
     - assets/google_icon.png
     - assets/facebook_icon.png
+    - assets/fruit_image.png
+    - assets/House.PNG
+    - assets/Sun.PNG
+    - assets/Inka.PNG
+    - assets/Hill.png
+    - assets/Strawberry.png
     - lib/images/Screenshot 2025-02-03 192844.png
     - lib/images/profile.jpg
   #   - images/a_dot_ham.jpeg

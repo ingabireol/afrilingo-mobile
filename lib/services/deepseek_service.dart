@@ -1,20 +1,14 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class DeepSeekService {
   final String _baseUrl = 'https://openrouter.ai/api/v1';
-  // Default API key that can be overridden
-  static const String _defaultApiKey = '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';
+  // Default API key - Replace this with your actual DeepSeek API key
+  static const String defaultApiKey = 'sk-or-v1-317d8f35e4a68d3f8cbf1f1a0f5c9c4c6b7a9e8d7f6e5d4c3b2a1908070605';
   final String _apiKey;
 
-  DeepSeekService() : _apiKey = dotenv.env['OPENROUTER_API_KEY'] ?? _defaultApiKey {
-    if (_apiKey.isEmpty) {
-      throw Exception('OpenRouter API Key is not set.');
-    }
-  }
-
-  DeepSeekService.withApiKey(this._apiKey);
+  // Constructor that uses default API key if none provided
+  DeepSeekService([String? apiKey]) : _apiKey = apiKey ?? defaultApiKey;
 
   Future<String> translateToKinyarwanda(String text) async {
     try {
@@ -72,15 +66,12 @@ class DeepSeekService {
           'messages': [
             {
               'role': 'system',
-              'content': """
-Ufite uruhare rwo gufasha abanyarwanda kwiga Kinyarwanda. 
-Genzura ibikurikira:
-1. Subiza mu Kinyarwanda gusa.
-2. Subiza ibibazo by'umuntu gusa, ntugire ibindi.
-3. Koresha amagambo maremare.
-4. Subiza ibibazo by'umuntu gusa, ntugire ibindi.
-5. Niba umaze kubaza ikibazo mu rurimi rundi, subiramo mu Kinyarwanda.
-6. Subiza ibibazo by'umuntu gusa, ntugire ibindi."""
+              'content': '''You are a Kinyarwanda language tutor.
+              1. Always respond in Kinyarwanda only
+              2. Be helpful and encouraging
+              3. If a question is asked in another language, rephrase it in Kinyarwanda
+              4. Act as a Kinyarwanda language teacher
+              5. Use natural and meaningful phrases'''
             },
             {
               'role': 'user',
@@ -88,7 +79,7 @@ Genzura ibikurikira:
             }
           ],
           'temperature': 0.7,
-          'max_tokens': 200,
+          'max_tokens': 300,
         }),
       );
 

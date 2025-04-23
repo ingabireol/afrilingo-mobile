@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import '../services/deepseek_service.dart';
 import '../widgets/auth/navigation_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Chat message widget
 class ChatMessage extends StatelessWidget {
@@ -100,55 +101,21 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         isUser: false,
       ));
 
-      bool envLoaded = false;
-      try {
-        String mainPath = 'd:/clb/Workspace/afrilingo/afrilingo/.env';
-        await dotenv.load(fileName: mainPath);
-        envLoaded = true;
-      } catch (e) {
-        try {
-          String envPath = _findEnvFile();
-          await dotenv.load(fileName: envPath);
-          envLoaded = true;
-        } catch (envError) {
-          print('Environment file not found: $envError');
-        }
-      }
-
-      if (!envLoaded) {
-        setState(() {
-          if (_messages.isNotEmpty) _messages.removeLast();
-          _messages.add(const ChatMessage(
-            text: 'Could not find .env file with API key.',
-            isUser: false,
-          ));
-        });
-        _showApiKeyInputDialog();
-        return;
-      }
-
-      final apiKey = dotenv.env['DEEPSEEK_API_KEY'];
-      if (apiKey == null || apiKey.isEmpty) {
-        _showApiKeyInputDialog();
-        return;
-      }
-
-      _deepSeekService = DeepSeekService.withApiKey(apiKey);
+      // Initialize service with default API key
+      _deepSeekService = DeepSeekService();
       setState(() {
-        _isApiInitialized = true;
         _isLoading = false;
-        if (_messages.isNotEmpty) _messages.removeLast();
-        _messages.add(const ChatMessage(
-          text: 'Hello! I can help you with Kinyarwanda translation and conversation. What would you like to do?',
-          isUser: false,
-        ));
+        _isApiInitialized = true;
       });
+
+      // Add welcome message
+      _addWelcomeMessage();
     } catch (e) {
       setState(() {
         _isLoading = false;
         if (_messages.isNotEmpty) _messages.removeLast();
         _messages.add(ChatMessage(
-          text: 'Error initializing DeepSeek: $e',
+          text: 'Error initializing service: $e',
           isUser: false,
         ));
       });
@@ -325,7 +292,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Note: Your API key will only be stored in this app and used for the chatbot.',
+                      'Note: Your API key will be securely stored for future use.',
                       style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
                     ),
                   ],
@@ -343,16 +310,19 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 ),
                 TextButton(
                   child: const Text('Save & Continue'),
-                  onPressed: () {
+                  onPressed: () async {
                     final apiKey = apiKeyController.text.trim();
                     if (apiKey.isNotEmpty && apiKey.startsWith('sk-')) {
-                      // Set the API key for the chatbot service
+                      // Save API key to SharedPreferences
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString('deepseek_api_key', apiKey);
+                      
                       Navigator.of(context).pop();
                       
                       // Initialize ChatbotService with the provided API key
                       try {
                         setState(() {
-                          _deepSeekService = DeepSeekService.withApiKey(apiKey);
+                          _deepSeekService = DeepSeekService(apiKey);
                           _isLoading = false;
                           _isApiInitialized = true;
                         });
@@ -402,30 +372,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   // Add a welcome message to the chat
   void _addWelcomeMessage() {
-    setState(() {
-      _messages.add(const ChatMessage(
-        text: 'Muraho! Ndaje kukubaza ibibazo mu Kinyarwanda.',
-        isUser: false,
-      ));
-      
-      // Add a message explaining how to use the chatbot
-      _messages.add(const ChatMessage(
-        text: 'Nshobora kugufasha kwiga Kinyarwanda. Andika ubutumwa bwawe hasi hanyuma ukande buto yo kohereza.',
-        isUser: false,
-      ));
-      
-      // Add conversation starters
-      if (_deepSeekService != null) {
-        final starters = _deepSeekService!.getConversationStarters();
-        _messages.add(ChatMessage(
-          text: 'Dore ingero z\'ibibazo ushobora kubaza:\n• ${starters.join('\n• ')}',
-          isUser: false,
-        ));
-      }
-    });
-    
-    // Scroll to bottom to show all messages
-    _scrollToBottom();
+    if (_messages.isNotEmpty) _messages.removeLast();
+    _messages.add(const ChatMessage(
+      text: 'Hello! I can help you with Kinyarwanda translation and conversation. What would you like to do?',
+      isUser: false,
+    ));
   }
 
   // Scroll to bottom of chat

@@ -55,17 +55,13 @@ class AuthService {
         
         // Save token to shared preferences
         final prefs = await SharedPreferences.getInstance();
-        if (data.containsKey('token')) {
-          await prefs.setString('auth_token', data['token']);
-        } else if (data.containsKey('access_token')) {
-          await prefs.setString('auth_token', data['access_token']);
+        if (data.containsKey('accessToken')) {
+          await prefs.setString('auth_token', data['accessToken']);
         }
         
-        // Save user role if available
-        if (data.containsKey('role')) {
-          await saveUserRole(data['role']);
-        } else if (data.containsKey('user') && data['user'] is Map && data['user'].containsKey('role')) {
-          await saveUserRole(data['user']['role']);
+        // Extract and save user role
+        if (data.containsKey('user') && data['user'] is Map && data['user'].containsKey('role')) {
+          await prefs.setString('user_role', data['user']['role']);
         }
         
         return data;
@@ -104,7 +100,7 @@ class AuthService {
   // Check if user is admin
   Future<bool> isAdmin() async {
     final role = await getUserRole();
-    return role == 'ADMIN';
+    return role == 'ROLE_ADMIN' || role == 'ADMIN';
   }
   
   // Save user role to shared preferences

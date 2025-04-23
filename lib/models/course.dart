@@ -21,11 +21,22 @@ class Course {
 
   factory Course.fromJson(Map<String, dynamic> json) {
     // Handle different field names that might come from the API
-    final languageData = json['language'];
     Language courseLanguage;
     
-    if (languageData is Map<String, dynamic>) {
-      courseLanguage = Language.fromJson(languageData);
+    if (json.containsKey('language') && json['language'] != null) {
+      final languageData = json['language'];
+      if (languageData is Map<String, dynamic>) {
+        courseLanguage = Language.fromJson(languageData);
+      } else {
+        // Handle case where language might be an ID or other format
+        courseLanguage = Language(
+          id: 0,
+          name: 'Unknown',
+          code: 'unknown',
+          description: '',
+          flagImage: '',
+        );
+      }
     } else if (json.containsKey('languageId')) {
       // If we only have languageId, create a minimal Language object
       courseLanguage = Language(
@@ -50,10 +61,10 @@ class Course {
       id: json['id'] ?? 0,
       title: json['title'] ?? '',
       description: json['description'] ?? '',
-      imageUrl: json['image'] ?? json['imageUrl'] ?? '',
+      imageUrl: json['imageUrl'] ?? json['image'] ?? '',  // Prioritize imageUrl over image
       language: courseLanguage,
-      difficulty: json['level'] ?? json['difficulty'] ?? 'BEGINNER',
-      isActive: json['active'] ?? json['isActive'] ?? true,
+      difficulty: json['difficulty'] ?? json['level'] ?? 'BEGINNER',  // Prioritize difficulty over level
+      isActive: json['isActive'] ?? json['active'] ?? true,  // Prioritize isActive over active
     );
   }
 
@@ -61,12 +72,10 @@ class Course {
     return {
       'title': title,
       'description': description,
-      'image': imageUrl,
-      'level': difficulty,
-      'active': isActive,
-      'language': {
-        'id': language.id,
-      },
+      'imageUrl': imageUrl,
+      'languageId': language.id,  // Send languageId instead of full language object
+      'difficulty': difficulty,
+      'isActive': isActive,
     };
   }
 }
