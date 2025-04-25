@@ -92,24 +92,42 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   Future<void> _initializeDeepSeek() async {
     setState(() {
       _isLoading = true;
+      _isApiInitialized = false;
     });
 
     try {
       _messages.clear();
       _messages.add(const ChatMessage(
-        text: 'Initializing DeepSeek service...',
+        text: 'Initializing service...',
         isUser: false,
       ));
 
-      // Initialize service with default API key
-      _deepSeekService = DeepSeekService();
-      setState(() {
-        _isLoading = false;
-        _isApiInitialized = true;
-      });
+      // Try to get API key from preferences first
+      String? apiKey = await DeepSeekService.getApiKey();
 
-      // Add welcome message
-      _addWelcomeMessage();
+      // If no API key in preferences, try environment variable
+      if (apiKey == null || apiKey.isEmpty) {
+        try {
+          await dotenv.load();
+          apiKey = dotenv.env['OPENROUTER_API_KEY'];
+        } catch (e) {
+          print('Failed to load .env file: $e');
+        }
+      }
+
+      // If we have a valid API key, initialize the service
+      if (apiKey != null && apiKey.isNotEmpty && apiKey.startsWith('sk-')) {
+        _deepSeekService = DeepSeekService(apiKey);
+        setState(() {
+          _isLoading = false;
+          _isApiInitialized = true;
+        });
+        _addWelcomeMessage();
+        return;
+      }
+
+      // No valid API key found, show dialog
+      _showApiKeyInputDialog();
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -119,6 +137,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           isUser: false,
         ));
       });
+      _showApiKeyInputDialog();
     }
   }
 
@@ -242,6 +261,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         'No .env file found. Please create one with DEEPSEEK_API_KEY');
   }
 
+  // Show API key dialog for errors or missing key
+  void _showApiKeyDialog(String message) {
+    _showApiKeyInputDialog();
+  }
+
   // Show API key input dialog
   void _showApiKeyInputDialog() {
     final TextEditingController apiKeyController = TextEditingController();
@@ -254,21 +278,21 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('DeepSeek API Key Required'),
+              title: const Text('OpenRouter API Key Required'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'To use the chatbot feature, you need to provide a DeepSeek API key.',
+                      'To use the chatbot feature, you need to provide an OpenRouter API key.',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '1. Go to https://deepseek.com/api-keys\n'
+                      '1. Go to https://openrouter.ai/keys\n'
                       '2. Sign in or create an account\n'
-                      '3. Click "Create new secret key"\n'
+                      '3. Create a new API key\n'
                       '4. Copy the key and paste it below',
                     ),
                     const SizedBox(height: 16),
@@ -313,24 +337,21 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   onPressed: () async {
                     final apiKey = apiKeyController.text.trim();
                     if (apiKey.isNotEmpty && apiKey.startsWith('sk-')) {
-                      // Save API key to SharedPreferences
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setString('deepseek_api_key', apiKey);
+                      // Save API key to preferences
+                      await DeepSeekService.saveApiKey(apiKey);
                       
                       Navigator.of(context).pop();
                       
-                      // Initialize ChatbotService with the provided API key
+                      // Initialize service with the provided API key
                       try {
+                        _deepSeekService = DeepSeekService(apiKey);
                         setState(() {
-                          _deepSeekService = DeepSeekService(apiKey);
                           _isLoading = false;
                           _isApiInitialized = true;
                         });
-                        
-                        // Add welcome message
                         _addWelcomeMessage();
                       } catch (e) {
-                        _showInitializationErrorDialog(e.toString());
+                        _showErrorDialog('Failed to initialize service: $e');
                       }
                     }
                   },
@@ -343,25 +364,50 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     );
   }
 
-  // Show initialization error dialog
-  void _showInitializationErrorDialog(String errorMessage) {
+  void _showErrorDialog(String message) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Initialization Error'),
-          content: Text(
-            'Ntabwo byagenze neza: $errorMessage\n\n'
-            'Hakenewe gukora ibinini bikurikira:\n'
-            '1. Hakikisha .env file ufite API key\n'
-            '2. Koresha API key yemewe\n'
-            '3. Ensure .env is in the correct directory',
+          title: const Text('Error'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                message,
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Please check:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '1. Your API key is valid and starts with sk-\n'
+                '2. The API key has sufficient permissions\n'
+                '3. You have an active internet connection',
+              ),
+            ],
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Ego (OK)'),
+              child: const Text('Try Again'),
               onPressed: () {
                 Navigator.of(context).pop();
+                _showApiKeyInputDialog();
+              },
+            ),
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                setState(() {
+                  _isLoading = false;
+                  _isApiInitialized = false;
+                });
               },
             ),
           ],

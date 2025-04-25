@@ -1,14 +1,35 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 class DeepSeekService {
-  final String _baseUrl = 'https://openrouter.ai/api/v1';
-  // Default API key - Replace this with your actual DeepSeek API key
-  static const String defaultApiKey = 'sk-or-v1-317d8f35e4a68d3f8cbf1f1a0f5c9c4c6b7a9e8d7f6e5d4c3b2a1908070605';
   final String _apiKey;
+  final String _baseUrl = 'https://openrouter.ai/api/v1';
 
-  // Constructor that uses default API key if none provided
-  DeepSeekService([String? apiKey]) : _apiKey = apiKey ?? defaultApiKey;
+  // Constructor that uses environment variable for API key
+  DeepSeekService([String? apiKey]) : _apiKey = apiKey ?? (dotenv.env['OPENROUTER_API_KEY'] ?? '') {
+    if (_apiKey.isEmpty) {
+      throw Exception('OpenRouter API Key is not set. Please check your .env file or provide a valid API key.');
+    }
+    // Validate API key format
+    if (!_apiKey.startsWith('sk-')) {
+      throw Exception('Invalid API key format. API key should start with "sk-"');
+    }
+  }
+
+  // Static method to get API key from preferences
+  static Future<String?> getApiKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('openrouter_api_key');
+  }
+
+  // Static method to save API key to preferences
+  static Future<void> saveApiKey(String apiKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('openrouter_api_key', apiKey);
+  }
 
   Future<String> translateToKinyarwanda(String text) async {
     try {
@@ -47,7 +68,11 @@ class DeepSeekService {
         throw Exception('Translation failed: ${response.body}');
       }
     } catch (e) {
-      throw Exception('Failed to connect to OpenRouter API: $e');
+      if (e.toString().contains('401')) {
+        throw Exception('Authentication failed: Invalid or expired API key. Please check your API key and try again.');
+      } else {
+        throw Exception('Failed to connect to OpenRouter API: $e');
+      }
     }
   }
 
@@ -90,7 +115,11 @@ class DeepSeekService {
         throw Exception('Chat failed: ${response.body}');
       }
     } catch (e) {
-      throw Exception('Failed to connect to OpenRouter API: $e');
+      if (e.toString().contains('401')) {
+        throw Exception('Authentication failed: Invalid or expired API key. Please check your API key and try again.');
+      } else {
+        throw Exception('Failed to connect to OpenRouter API: $e');
+      }
     }
   }
 

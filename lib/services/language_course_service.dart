@@ -47,13 +47,6 @@ class LanguageCourseService {
   // Get all languages
   Future<List<Language>> getAllLanguages() async {
     try {
-      // Check if server is available first
-      final isAvailable = await isServerAvailable();
-      if (!isAvailable) {
-        print('Server unavailable, using mock languages');
-        return _getMockLanguages();
-      }
-      
       final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/languages'),
@@ -61,7 +54,6 @@ class LanguageCourseService {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        // Handle different response formats
         final dynamic responseData = json.decode(response.body);
         List<dynamic> jsonData;
         
@@ -70,38 +62,27 @@ class LanguageCourseService {
         } else if (responseData is List) {
           jsonData = responseData;
         } else {
-          print('Unexpected response format, using mock languages');
-          return _getMockLanguages();
+          throw Exception('Unexpected response format from server');
         }
         
-        final languages = jsonData.map((json) => Language.fromJson(json)).toList();
-        return languages.isNotEmpty ? languages : _getMockLanguages();
+        return jsonData.map((json) => Language.fromJson(json)).toList();
       } else {
-        print('Failed to load languages: ${response.statusCode} - ${response.body}');
-        return _getMockLanguages(); // Fallback to mock data
+        throw Exception('Failed to load languages: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('Exception in getAllLanguages: $e');
-      return _getMockLanguages(); // Fallback to mock data
+      print('Error fetching languages from server: $e');
+      // Only use mock data if server is confirmed unavailable
+      if (!(await isServerAvailable())) {
+        print('Server unavailable, using mock languages as fallback');
+        return _getMockLanguages();
+      }
+      rethrow;
     }
   }
 
   // Get all courses
   Future<List<Course>> getAllCourses() async {
     try {
-      // Check if server is available first
-      final isAvailable = await isServerAvailable();
-      if (!isAvailable) {
-        print('Server unavailable, using mock courses');
-        // Combine mock courses for all languages
-        final mockLanguages = _getMockLanguages();
-        List<Course> allCourses = [];
-        for (var language in mockLanguages) {
-          allCourses.addAll(_getMockCourses(language.id));
-        }
-        return allCourses;
-      }
-      
       final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/courses'),
@@ -109,7 +90,6 @@ class LanguageCourseService {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        // Handle different response formats
         final dynamic responseData = json.decode(response.body);
         List<dynamic> jsonData;
         
@@ -118,31 +98,19 @@ class LanguageCourseService {
         } else if (responseData is List) {
           jsonData = responseData;
         } else {
-          print('Unexpected response format, using mock courses');
-          // Fallback to mock data
-          final mockLanguages = _getMockLanguages();
-          List<Course> allCourses = [];
-          for (var language in mockLanguages) {
-            allCourses.addAll(_getMockCourses(language.id));
-          }
-          return allCourses;
+          throw Exception('Unexpected response format from server');
         }
         
         final courses = jsonData.map((json) => Course.fromJson(json)).toList();
-        if (courses.isNotEmpty) {
-          return courses;
-        } else {
-          // If no courses returned, use mock data
-          final mockLanguages = _getMockLanguages();
-          List<Course> allCourses = [];
-          for (var language in mockLanguages) {
-            allCourses.addAll(_getMockCourses(language.id));
-          }
-          return allCourses;
-        }
+        return courses;
       } else {
-        print('Failed to load courses: ${response.statusCode} - ${response.body}');
-        // Combine mock courses for all languages
+        throw Exception('Failed to load courses: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error fetching courses from server: $e');
+      // Only use mock data if server is confirmed unavailable
+      if (!(await isServerAvailable())) {
+        print('Server unavailable, using mock courses as fallback');
         final mockLanguages = _getMockLanguages();
         List<Course> allCourses = [];
         for (var language in mockLanguages) {
@@ -150,15 +118,7 @@ class LanguageCourseService {
         }
         return allCourses;
       }
-    } catch (e) {
-      print('Exception in getAllCourses: $e');
-      // Combine mock courses for all languages
-      final mockLanguages = _getMockLanguages();
-      List<Course> allCourses = [];
-      for (var language in mockLanguages) {
-        allCourses.addAll(_getMockCourses(language.id));
-      }
-      return allCourses;
+      rethrow;
     }
   }
 
