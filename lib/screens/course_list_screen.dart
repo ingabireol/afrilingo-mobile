@@ -33,9 +33,17 @@ class _CourseListScreenState extends State<CourseListScreen> {
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Error loading courses: $e';
+        _errorMessage = 'Failed to load courses. Please check your internet connection and try again.';
       });
     }
+  }
+
+  Future<void> _refreshCourses() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    await _loadCourses();
   }
 
   @override
@@ -46,7 +54,10 @@ class _CourseListScreenState extends State<CourseListScreen> {
         backgroundColor: const Color(0xFF8B4513),
         foregroundColor: Colors.white,
       ),
-      body: _buildBody(),
+      body: RefreshIndicator(
+        onRefresh: _refreshCourses,
+        child: _buildBody(),
+      ),
     );
   }
 
@@ -60,20 +71,16 @@ class _CourseListScreenState extends State<CourseListScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.red),
+              style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _isLoading = true;
-                  _errorMessage = null;
-                });
-                _loadCourses();
-              },
+              onPressed: _refreshCourses,
               child: const Text('Retry'),
             ),
           ],
@@ -85,7 +92,6 @@ class _CourseListScreenState extends State<CourseListScreen> {
       return const Center(
         child: Text(
           'No courses available for this language yet.',
-          textAlign: TextAlign.center,
           style: TextStyle(fontSize: 16),
         ),
       );
@@ -93,108 +99,50 @@ class _CourseListScreenState extends State<CourseListScreen> {
 
     return ListView.builder(
       itemCount: _courses.length,
-      padding: const EdgeInsets.all(16),
       itemBuilder: (context, index) {
         final course = _courses[index];
         return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 3,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                child: course.imageUrl.isNotEmpty
-                    ? Image.network(
-                        course.imageUrl,
-                        height: 150,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          height: 150,
-                          width: double.infinity,
-                          color: const Color(0xFFDEB887),
-                          child: const Icon(
-                            Icons.school,
-                            size: 50,
-                            color: Color(0xFF8B4513),
-                          ),
-                        ),
-                      )
-                    : Container(
-                        height: 150,
-                        width: double.infinity,
-                        color: const Color(0xFFDEB887),
-                        child: const Icon(
-                          Icons.school,
-                          size: 50,
-                          color: Color(0xFF8B4513),
-                        ),
-                      ),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: ListTile(
+            leading: course.imageUrl.isNotEmpty
+                ? Image.network(
+                    course.imageUrl,
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.book, size: 50);
+                    },
+                  )
+                : const Icon(Icons.book, size: 50),
+            title: Text(course.title),
+            subtitle: Text(course.description),
+            trailing: Text(
+              course.difficulty,
+              style: TextStyle(
+                color: _getDifficultyColor(course.difficulty),
+                fontWeight: FontWeight.bold,
               ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            course.title,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF582805),
-                            ),
-                          ),
-                        ),
-                        Chip(
-                          label: Text(
-                            course.difficulty,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          backgroundColor: const Color(0xFF8B4513),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      course.description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Navigate to course details or start learning
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8B4513),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 45),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('Start Learning'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
+            onTap: () {
+              // TODO: Navigate to course details
+            },
           ),
         );
       },
     );
+  }
+
+  Color _getDifficultyColor(String difficulty) {
+    switch (difficulty.toUpperCase()) {
+      case 'BEGINNER':
+        return Colors.green;
+      case 'INTERMEDIATE':
+        return Colors.orange;
+      case 'ADVANCED':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 }

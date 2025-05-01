@@ -144,8 +144,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   Future<void> _handleMessage(String message) async {
     if (message.isEmpty) return;
 
-    // Add user message immediately
     setState(() {
+      // In translation mode, only show the text to be translated
+      if (_isTranslationMode) {
+        _messages.clear(); // Clear previous translations for cleaner UI
+      }
       _messages.add(ChatMessage(text: message, isUser: true));
       _messageController.clear();
     });

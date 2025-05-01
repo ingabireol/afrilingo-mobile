@@ -138,7 +138,7 @@ class _UserDashboardState extends State<UserDashboard> {
               Icon(
                 icon,
                 size: 48,
-                color: Colors.blue,
+                color: const Color(0xFF8B4513),
               ),
               const SizedBox(height: 8),
               Text(

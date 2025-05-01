@@ -15,8 +15,6 @@ class LanguageCourseService {
       return prefs.getString('auth_token');
     } catch (e) {
       print('Error getting auth token: $e');
-      // Add more detailed error logging
-      print('SharedPreferences error details: ${e.toString()}');
       return null;
     }
   }
@@ -54,29 +52,38 @@ class LanguageCourseService {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final dynamic responseData = json.decode(response.body);
-        List<dynamic> jsonData;
-        
-        if (responseData is Map<String, dynamic> && responseData.containsKey('data')) {
-          jsonData = responseData['data'];
-        } else if (responseData is List) {
-          jsonData = responseData;
-        } else {
-          throw Exception('Unexpected response format from server');
+        try {
+          final dynamic responseData = json.decode(response.body);
+          List<dynamic> jsonData;
+          
+          if (responseData is Map<String, dynamic> && responseData.containsKey('data')) {
+            if (responseData['data'] is List) {
+              jsonData = responseData['data'];
+            } else {
+              throw FormatException('Server response data is not a list');
+            }
+          } else if (responseData is List) {
+            jsonData = responseData;
+          } else {
+            throw FormatException('Unexpected response format from server');
+          }
+
+          return jsonData.map((json) {
+            if (json is! Map<String, dynamic>) {
+              throw FormatException('Invalid language object format');
+            }
+            return Language.fromJson(json);
+          }).toList();
+        } catch (e) {
+          print('Error parsing language data: $e');
+          throw FormatException('Failed to parse server response: $e');
         }
-        
-        return jsonData.map((json) => Language.fromJson(json)).toList();
       } else {
         throw Exception('Failed to load languages: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       print('Error fetching languages from server: $e');
-      // Only use mock data if server is confirmed unavailable
-      if (!(await isServerAvailable())) {
-        print('Server unavailable, using mock languages as fallback');
-        return _getMockLanguages();
-      }
-      rethrow;
+      throw Exception('Failed to connect to server: $e');
     }
   }
 
@@ -90,35 +97,38 @@ class LanguageCourseService {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final dynamic responseData = json.decode(response.body);
-        List<dynamic> jsonData;
-        
-        if (responseData is Map<String, dynamic> && responseData.containsKey('data')) {
-          jsonData = responseData['data'];
-        } else if (responseData is List) {
-          jsonData = responseData;
-        } else {
-          throw Exception('Unexpected response format from server');
+        try {
+          final dynamic responseData = json.decode(response.body);
+          List<dynamic> jsonData;
+          
+          if (responseData is Map<String, dynamic> && responseData.containsKey('data')) {
+            if (responseData['data'] is List) {
+              jsonData = responseData['data'];
+            } else {
+              throw FormatException('Server response data is not a list');
+            }
+          } else if (responseData is List) {
+            jsonData = responseData;
+          } else {
+            throw FormatException('Unexpected response format from server');
+          }
+
+          return jsonData.map((json) {
+            if (json is! Map<String, dynamic>) {
+              throw FormatException('Invalid course object format');
+            }
+            return Course.fromJson(json);
+          }).toList();
+        } catch (e) {
+          print('Error parsing course data: $e');
+          throw FormatException('Failed to parse server response: $e');
         }
-        
-        final courses = jsonData.map((json) => Course.fromJson(json)).toList();
-        return courses;
       } else {
         throw Exception('Failed to load courses: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       print('Error fetching courses from server: $e');
-      // Only use mock data if server is confirmed unavailable
-      if (!(await isServerAvailable())) {
-        print('Server unavailable, using mock courses as fallback');
-        final mockLanguages = _getMockLanguages();
-        List<Course> allCourses = [];
-        for (var language in mockLanguages) {
-          allCourses.addAll(_getMockCourses(language.id));
-        }
-        return allCourses;
-      }
-      rethrow;
+      throw Exception('Failed to connect to server: $e');
     }
   }
 
@@ -132,7 +142,6 @@ class LanguageCourseService {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        // Handle different response formats
         final dynamic responseData = json.decode(response.body);
         List<dynamic> jsonData;
         
@@ -141,19 +150,16 @@ class LanguageCourseService {
         } else if (responseData is List) {
           jsonData = responseData;
         } else {
-          print('Unexpected response format, using mock courses');
-          return _getMockCourses(languageId);
+          throw FormatException('Unexpected response format from server');
         }
         
-        final courses = jsonData.map((json) => Course.fromJson(json)).toList();
-        return courses.isNotEmpty ? courses : _getMockCourses(languageId);
+        return jsonData.map((json) => Course.fromJson(json)).toList();
       } else {
-        print('Failed to load courses: ${response.statusCode} - ${response.body}');
-        return _getMockCourses(languageId); // Fallback to mock data
+        throw Exception('Failed to load courses: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('Exception in getCoursesByLanguageId: $e');
-      return _getMockCourses(languageId); // Fallback to mock data
+      print('Error fetching courses by language ID: $e');
+      throw Exception('Failed to connect to server: $e');
     }
   }
 
@@ -213,85 +219,5 @@ class LanguageCourseService {
     } catch (e) {
       throw Exception('Failed to connect to server: $e');
     }
-  }
-  
-  // Mock data for languages when server is unavailable
-  List<Language> _getMockLanguages() {
-    return [
-      Language(
-        id: 1,
-        name: 'Kinyarwanda',
-        code: 'rw',
-        description: 'The official language of Rwanda',
-        flagImage: 'https://upload.wikimedia.org/wikipedia/commons/1/17/Flag_of_Rwanda.svg',
-      ),
-      Language(
-        id: 2,
-        name: 'Swahili',
-        code: 'sw',
-        description: 'A widely spoken language in East Africa',
-        flagImage: 'https://upload.wikimedia.org/wikipedia/commons/4/49/Flag_of_Kenya.svg',
-      ),
-      Language(
-        id: 3,
-        name: 'Yoruba',
-        code: 'yo',
-        description: 'A language spoken in West Africa, primarily in Nigeria',
-        flagImage: 'https://upload.wikimedia.org/wikipedia/commons/7/79/Flag_of_Nigeria.svg',
-      ),
-    ];
-  }
-  
-  // Mock data for courses when server is unavailable
-  List<Course> _getMockCourses(int languageId) {
-    final languages = _getMockLanguages();
-    final language = languages.firstWhere(
-      (lang) => lang.id == languageId,
-      orElse: () => languages.first,
-    );
-    
-    if (languageId == 1) { // Kinyarwanda courses
-      return [
-        Course(
-          id: 1,
-          title: 'Kinyarwanda Basics',
-          description: 'Learn the fundamentals of Kinyarwanda language',
-          imageUrl: 'https://images.unsplash.com/photo-1489367874814-f5d040621dd8',
-          language: language,
-          difficulty: 'BEGINNER',
-        ),
-        Course(
-          id: 2,
-          title: 'Kinyarwanda Conversations',
-          description: 'Practice everyday conversations in Kinyarwanda',
-          imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac',
-          language: language,
-          difficulty: 'INTERMEDIATE',
-        ),
-      ];
-    } else if (languageId == 2) { // Swahili courses
-      return [
-        Course(
-          id: 3,
-          title: 'Swahili for Beginners',
-          description: 'Start your journey with Swahili language',
-          imageUrl: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5',
-          language: language,
-          difficulty: 'BEGINNER',
-        ),
-      ];
-    } else if (languageId == 3) { // Yoruba courses
-      return [
-        Course(
-          id: 4,
-          title: 'Introduction to Yoruba',
-          description: 'Learn the basics of Yoruba language and culture',
-          imageUrl: 'https://images.unsplash.com/photo-1534531173927-aeb928d54385',
-          language: language,
-          difficulty: 'BEGINNER',
-        ),
-      ];
-    }
-    return []; // Return empty list for unknown language ID
   }
 }
