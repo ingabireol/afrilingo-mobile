@@ -70,12 +70,13 @@ class Course {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'title': title,
       'description': description,
-      'imageUrl': imageUrl,
-      'languageId': language.id,  // Send languageId instead of full language object
-      'difficulty': difficulty,
+      'level': difficulty,
+      'image': imageUrl,
       'isActive': isActive,
+      'language': {'id': language.id},
     };
   }
 }

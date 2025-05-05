@@ -14,20 +14,40 @@ class DeepSeekService {
     _initializeApiKey();
   }
 
-  void _initializeApiKey() {
-    String key = _apiKey.isNotEmpty ? _apiKey : (dotenv.env['OPENROUTER_API_KEY'] ?? '');
-    if (key.isEmpty) {
-      getApiKey().then((savedKey) {
+  Future<void> _initializeApiKey() async {
+    try {
+      String key = _apiKey;
+      
+      // Fallback 1: SharedPreferences
+      if (key.isEmpty) {
+        final savedKey = await getApiKey();
         if (savedKey != null && savedKey.isNotEmpty) {
           key = savedKey;
         }
-      });
-    }
-    if (key.isEmpty) {
-      throw Exception('OpenRouter API Key is not set. Please check your .env file or provide a valid API key.');
-    }
-    if (!key.startsWith('sk-')) {
-      throw Exception('Invalid API key format. API key should start with "sk-"');
+      }
+      
+      // Fallback 2: .env file
+      if (key.isEmpty) {
+        try {
+          await dotenv.load();
+          key = dotenv.env['OPENROUTER_API_KEY'] ?? '';
+        } catch (e) {
+          print('Failed to load .env file: $e');
+        }
+      }
+      
+      // Validation
+      if (key.isEmpty) {
+        throw Exception('OpenRouter API Key is not set.');
+      }
+      if (!key.startsWith('sk-')) {
+        throw Exception('Invalid API key format. Must start with "sk-"');
+      }
+      
+      await saveApiKey(key);
+    } catch (e) {
+      print('Error initializing API key: $e');
+      rethrow;
     }
   }
 
@@ -41,6 +61,7 @@ class DeepSeekService {
     await prefs.setString('openrouter_api_key', apiKey);
   }
 
+  // ==================== STRICT KINYARWANDA TRANSLATION ====================
   Future<String> translateToKinyarwanda(String text) async {
     try {
       final response = await http.post(
@@ -51,36 +72,28 @@ class DeepSeekService {
           'messages': [
             {
               'role': 'system',
-              'content': 'You are a professional Kinyarwanda translator. Translate ONLY into pure, natural Kinyarwanda. No prefixes, no explanations.'
+              'content': 'You are a Kinyarwanda translator. Translate the following text to Kinyarwanda. Respond only with the translation, no explanations.'
             },
             {
               'role': 'user',
-              'content': '[Translate to Kinyarwanda] $text'
+              'content': 'Translate this to Kinyarwanda: $text'
             }
           ],
-          'temperature': 0.2,
-          'max_tokens': 200,
+          'temperature': 0.1,
+          'max_tokens': 100,
+          'top_p': 0.1,
+          'frequency_penalty': 0.0,
+          'presence_penalty': 0.0,
         }),
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        String translation = data['choices'][0]['message']['content'].trim();
-        if (translation.isEmpty) {
-          throw Exception('Received empty translation.');
-        }
-        return translation;
-      } else {
-        throw Exception('Translation failed: ${response.body}');
-      }
+      return _processTranslationResponse(response);
     } catch (e) {
-      if (e.toString().contains('401')) {
-        throw Exception('Authentication failed: Invalid or expired API key.');
-      } else {
-        throw Exception('Failed to connect to OpenRouter API: $e');
-      }
+      throw Exception('Translation error: ${_sanitizeError(e)}');
     }
   }
+
+  // ==================== KINYARWANDA-ONLY CHAT ====================
 
   Future<String> chatInKinyarwanda(String message) async {
     try {
@@ -92,37 +105,84 @@ class DeepSeekService {
           'messages': [
             {
               'role': 'system',
-              'content': '''You are a native Kinyarwanda language tutor.
-Keep answers short (1-3 sentences), friendly, and in natural Kinyarwanda. 
-Do not explain unless requested. Encourage conversation.'''
+              'content': '''You are a native Kinyarwanda speaker. You must respond in Kinyarwanda only.
+
+Example responses:
+- For greetings: "Muraho", "Amakuru", "Mwaramutse"
+- For questions: "Witwa nde?", "Uva he?", "Urakora iki?"
+- For unclear messages: "Vuga Kinyarwanda gusa"
+- For English input: "Vuga Kinyarwanda gusa"
+
+Keep responses short and natural.'''
             },
             {
               'role': 'user',
-              'content': '[Respond in Kinyarwanda] $message'
+              'content': message
             }
           ],
           'temperature': 0.5,
-          'max_tokens': 300,
+          'max_tokens': 50,
+          'top_p': 0.5,
+          'frequency_penalty': 0.0,
+          'presence_penalty': 0.0,
         }),
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        String reply = data['choices'][0]['message']['content'].trim();
-        if (reply.isEmpty) {
-          throw Exception('Received empty chat response.');
-        }
-        return reply;
-      } else {
-        throw Exception('Chat failed: ${response.body}');
-      }
+      return _processChatResponse(response);
     } catch (e) {
-      if (e.toString().contains('401')) {
-        throw Exception('Authentication failed: Invalid or expired API key.');
-      } else {
-        throw Exception('Failed to connect to OpenRouter API: $e');
-      }
+      throw Exception('Chat error: ${_sanitizeError(e)}');
     }
+  }
+
+  // ==================== HELPER METHODS ====================
+  String _sanitizeError(dynamic e) {
+    return e.toString().replaceAll(_apiKey, '***REDACTED***');
+  }
+
+  String _processTranslationResponse(http.Response response) {
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      String content = data['choices'][0]['message']['content'].trim();
+      
+      // Check for empty or invalid responses
+      if (content.isEmpty || content == "?" || content == "??" || content == " ") {
+        return "Ntago byumvikana";
+      }
+      
+      // Remove any English words
+      content = content.replaceAll(RegExp(r'[a-zA-Z]'), '').trim();
+      
+      // If content is empty after removing English, return default message
+      if (content.isEmpty) {
+        return "Ntago byumvikana";
+      }
+      
+      return content;
+    }
+    throw Exception('Translation failed: ${response.statusCode}');
+  }
+
+  String _processChatResponse(http.Response response) {
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      String content = data['choices'][0]['message']['content'].trim();
+      
+      // Check for empty or invalid responses
+      if (content.isEmpty || content == "?" || content == "??" || content == " ") {
+        return "Vuga Kinyarwanda gusa";
+      }
+      
+      // Remove any English words
+      content = content.replaceAll(RegExp(r'[a-zA-Z]'), '').trim();
+      
+      // If content is empty after removing English, return default message
+      if (content.isEmpty) {
+        return "Vuga Kinyarwanda gusa";
+      }
+      
+      return content;
+    }
+    throw Exception('Chat failed: ${response.statusCode}');
   }
 
   Map<String, String> _headers() {
@@ -134,15 +194,15 @@ Do not explain unless requested. Encourage conversation.'''
     };
   }
 
+  // ==================== CONVERSATION STARTERS ====================
   List<String> getConversationStarters() {
     return [
-      'Muraho! (Hello!)',
-      'Amakuru? (How are you?)',
-      'Izina ryawe ni nde? (What is your name?)',
-      'Uva he? (Where are you from?)',
-      'Ufite imyaka ingahe? (How old are you?)',
-      'Ukunda iki? (What do you like?)',
-      'Urakora iki? (What do you do?)',
+      'Muraho!',
+      'Amakuru?',
+      'Witwa nde?',
+      'Uva he?',
+      'Urakora iki?',
+      'Ufite umunsi mwiza?',
     ];
   }
 }

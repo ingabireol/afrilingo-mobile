@@ -16,6 +16,7 @@ class _CourseListScreenState extends State<CourseListScreen> {
   List<Course> _courses = [];
   bool _isLoading = true;
   String? _errorMessage;
+  bool _isAuthError = false;
 
   @override
   void initState() {
@@ -29,11 +30,15 @@ class _CourseListScreenState extends State<CourseListScreen> {
       setState(() {
         _courses = courses;
         _isLoading = false;
+        _isAuthError = false;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Failed to load courses. Please check your internet connection and try again.';
+        _isAuthError = e.toString().contains('Authentication required');
+        _errorMessage = _isAuthError
+            ? 'Your session has expired. Please log in again to continue.'
+            : 'Failed to load courses. Please check your internet connection and try again.';
       });
     }
   }
@@ -42,8 +47,14 @@ class _CourseListScreenState extends State<CourseListScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _isAuthError = false;
     });
     await _loadCourses();
+  }
+
+  void _handleLoginRedirect() {
+    // TODO: Navigate to login screen
+    // Navigator.of(context).pushReplacementNamed('/login');
   }
 
   @override
@@ -71,7 +82,11 @@ class _CourseListScreenState extends State<CourseListScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            Icon(
+              _isAuthError ? Icons.lock_outline : Icons.error_outline,
+              size: 48,
+              color: _isAuthError ? Colors.orange : Colors.red,
+            ),
             const SizedBox(height: 16),
             Text(
               _errorMessage!,
@@ -80,8 +95,11 @@ class _CourseListScreenState extends State<CourseListScreen> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _refreshCourses,
-              child: const Text('Retry'),
+              onPressed: _isAuthError ? _handleLoginRedirect : _refreshCourses,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isAuthError ? Colors.orange : Colors.blue,
+              ),
+              child: Text(_isAuthError ? 'Log In' : 'Retry'),
             ),
           ],
         ),

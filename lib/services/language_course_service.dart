@@ -6,26 +6,60 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageCourseService {
   // Use localhost for emulator or your computer's IP for physical device
-  static const String baseUrl = 'http://10.0.2.2:8080/api/v1';
+  static const String baseUrl = 'http://192.168.1.71:8080/api/v1';
   
   // Get auth token from shared preferences
   Future<String?> _getAuthToken() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('auth_token');
+      final token = prefs.getString('auth_token');
+      
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+      
+      // Check if token is expired by decoding it
+      try {
+        final parts = token.split('.');
+        if (parts.length != 3) {
+          throw Exception('Invalid token format');
+        }
+        
+        final payload = json.decode(
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1])))
+        );
+        
+        final expirationTime = DateTime.fromMillisecondsSinceEpoch(payload['exp'] * 1000);
+        if (DateTime.now().isAfter(expirationTime)) {
+          // Token is expired, remove it
+          await prefs.remove('auth_token');
+          throw Exception('Token has expired');
+        }
+      } catch (e) {
+        print('Error checking token expiration: $e');
+        // If we can't decode the token, assume it's invalid
+        await prefs.remove('auth_token');
+        throw Exception('Invalid authentication token');
+      }
+      
+      return token;
     } catch (e) {
       print('Error getting auth token: $e');
-      return null;
+      rethrow;
     }
   }
   
   // Headers with auth token
   Future<Map<String, String>> _getHeaders() async {
-    final token = await _getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
+    try {
+      final token = await _getAuthToken();
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+    } catch (e) {
+      throw Exception('Authentication required. Please log in again.');
+    }
   }
 
   // Check if server is available
@@ -78,11 +112,20 @@ class LanguageCourseService {
           print('Error parsing language data: $e');
           throw FormatException('Failed to parse server response: $e');
         }
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        // Clear the stored token on authentication errors
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('auth_token');
+        throw Exception('Authentication required. Please log in again.');
       } else {
         throw Exception('Failed to load languages: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       print('Error fetching languages from server: $e');
+      if (e.toString().contains('Token has expired') || 
+          e.toString().contains('Authentication required')) {
+        throw Exception('Authentication required. Please log in again.');
+      }
       throw Exception('Failed to connect to server: $e');
     }
   }

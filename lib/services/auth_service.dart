@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 class AuthService {
   // Base URL for API requests
-  static const String baseUrl = 'http://10.0.2.2:8080/api/v1/auth';
+  static const String baseUrl = 'http://192.168.1.71:8080/api/v1/auth';
 
   // Sign up method
   Future<Map<String, dynamic>> signUp(
@@ -57,6 +57,8 @@ class AuthService {
         final prefs = await SharedPreferences.getInstance();
         if (data.containsKey('accessToken')) {
           await prefs.setString('auth_token', data['accessToken']);
+        } else if (data.containsKey('access_token')) {
+          await prefs.setString('auth_token', data['access_token']);
         }
         
         // Extract and save user role
