@@ -3,9 +3,19 @@ import 'package:flutter/material.dart';
 
 import 'congratspage.dart';
 
-class TranslationPage extends StatelessWidget {
-  const TranslationPage({Key? key}) : super(key: key);
+class TranslationPage extends StatefulWidget {
+  final int lessonId;
 
+  const TranslationPage({
+    Key? key,
+    required this.lessonId,
+  }) : super(key: key);
+
+  @override
+  State<TranslationPage> createState() => _TranslationPageState();
+}
+
+class _TranslationPageState extends State<TranslationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -18,7 +28,9 @@ class TranslationPage extends StatelessWidget {
               child: Row(
                 children: [
                   InkWell(
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -132,7 +144,9 @@ class TranslationPage extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                             side: BorderSide(color: Colors.red.shade400),
@@ -148,10 +162,16 @@ class TranslationPage extends StatelessWidget {
                         ),
                         const SizedBox(width: 16),
                         ElevatedButton(
-                          onPressed: () {  Navigator.push(
+                          onPressed: () {
+                            Navigator.push(
                               context,
                               MaterialPageRoute(
-                              builder: (context) => const CongratulationsScreen()),);},
+                                builder: (context) => CongratulationsScreen(
+                                  lessonId: widget.lessonId,
+                                ),
+                              ),
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFC49A6C),
                             foregroundColor: Colors.white,

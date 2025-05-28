@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class LanguageCourseService {
   // Use localhost for emulator or your computer's IP for physical device
-  static const String baseUrl = 'http://192.168.1.71:8080/api/v1';
+  static const String baseUrl = 'http://10.0.2.2:8080/api/v1';
   
   // Get auth token from shared preferences
   Future<String?> _getAuthToken() async {
@@ -144,11 +144,13 @@ class LanguageCourseService {
           final dynamic responseData = json.decode(response.body);
           List<dynamic> jsonData;
           
-          if (responseData is Map<String, dynamic> && responseData.containsKey('data')) {
-            if (responseData['data'] is List) {
+          if (responseData is Map<String, dynamic>) {
+            if (responseData.containsKey('data') && responseData['data'] is List) {
               jsonData = responseData['data'];
+            } else if (responseData.containsKey('courses') && responseData['courses'] is List) {
+              jsonData = responseData['courses'];
             } else {
-              throw FormatException('Server response data is not a list');
+              throw FormatException('Server response does not contain valid course data');
             }
           } else if (responseData is List) {
             jsonData = responseData;
@@ -166,11 +168,17 @@ class LanguageCourseService {
           print('Error parsing course data: $e');
           throw FormatException('Failed to parse server response: $e');
         }
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication required. Please log in again.');
       } else {
         throw Exception('Failed to load courses: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       print('Error fetching courses from server: $e');
+      if (e.toString().contains('Token has expired') || 
+          e.toString().contains('Authentication required')) {
+        throw Exception('Authentication required. Please log in again.');
+      }
       throw Exception('Failed to connect to server: $e');
     }
   }
@@ -185,23 +193,45 @@ class LanguageCourseService {
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final dynamic responseData = json.decode(response.body);
-        List<dynamic> jsonData;
-        
-        if (responseData is Map<String, dynamic> && responseData.containsKey('data')) {
-          jsonData = responseData['data'];
-        } else if (responseData is List) {
-          jsonData = responseData;
-        } else {
-          throw FormatException('Unexpected response format from server');
+        try {
+          final dynamic responseData = json.decode(response.body);
+          List<dynamic> jsonData;
+          
+          if (responseData is Map<String, dynamic>) {
+            if (responseData.containsKey('data') && responseData['data'] is List) {
+              jsonData = responseData['data'];
+            } else if (responseData.containsKey('courses') && responseData['courses'] is List) {
+              jsonData = responseData['courses'];
+            } else {
+              throw FormatException('Server response does not contain valid course data');
+            }
+          } else if (responseData is List) {
+            jsonData = responseData;
+          } else {
+            throw FormatException('Unexpected response format from server');
+          }
+
+          return jsonData.map((json) {
+            if (json is! Map<String, dynamic>) {
+              throw FormatException('Invalid course object format');
+            }
+            return Course.fromJson(json);
+          }).toList();
+        } catch (e) {
+          print('Error parsing course data: $e');
+          throw FormatException('Failed to parse server response: $e');
         }
-        
-        return jsonData.map((json) => Course.fromJson(json)).toList();
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication required. Please log in again.');
       } else {
         throw Exception('Failed to load courses: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       print('Error fetching courses by language ID: $e');
+      if (e.toString().contains('Token has expired') || 
+          e.toString().contains('Authentication required')) {
+        throw Exception('Authentication required. Please log in again.');
+      }
       throw Exception('Failed to connect to server: $e');
     }
   }

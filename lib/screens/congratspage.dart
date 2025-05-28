@@ -3,9 +3,19 @@ import 'package:flutter/material.dart';
 
 import 'Quiz.dart';
 
-class CongratulationsScreen extends StatelessWidget {
-  const CongratulationsScreen({super.key});
+class CongratulationsScreen extends StatefulWidget {
+  final int lessonId;
 
+  const CongratulationsScreen({
+    super.key,
+    required this.lessonId,
+  });
+
+  @override
+  State<CongratulationsScreen> createState() => _CongratulationsScreenState();
+}
+
+class _CongratulationsScreenState extends State<CongratulationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,10 +110,14 @@ class CongratulationsScreen extends StatelessWidget {
                   child: TextButton(
                     onPressed: () {
                       Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const QuizStartScreen()),
-                    );},
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => QuizStartScreen(
+                            lessonId: widget.lessonId,
+                          ),
+                        ),
+                      );
+                    },
                     child: const Text(
                       'Take another round',
                       style: TextStyle(
@@ -124,11 +138,12 @@ class CongratulationsScreen extends StatelessWidget {
                   ),
                   child: TextButton(
                     onPressed: () {
-                      Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const UserDashboard()),
-                    );
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const UserDashboard(),
+                        ),
+                      );
                     },
                     child: const Text(
                       'Finish',

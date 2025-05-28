@@ -10,7 +10,7 @@ class DeepSeekService {
 
   DeepSeekService([String? apiKey, String? model])
       : _apiKey = apiKey ?? '',
-        _model = model ?? 'deepseek/deepseek-v3-base:free' {
+        _model = model ?? 'mistralai/mistral-7b-instruct' {
     _initializeApiKey();
   }
 
@@ -72,16 +72,23 @@ class DeepSeekService {
           'messages': [
             {
               'role': 'system',
-              'content': 'You are a Kinyarwanda translator. Translate the following text to Kinyarwanda. Respond only with the translation, no explanations.'
+              'content': '''You are a professional Kinyarwanda translator and language tutor. Your task is to:
+1. Translate the given English text to Kinyarwanda
+2. Ensure the translation is natural and culturally appropriate
+3. Maintain the original meaning and context
+4. Use proper Kinyarwanda grammar and vocabulary
+5. ALWAYS respond in Kinyarwanda using proper Latin characters
+
+Respond only with the translation, no explanations or English text.'''
             },
             {
               'role': 'user',
               'content': 'Translate this to Kinyarwanda: $text'
             }
           ],
-          'temperature': 0.1,
-          'max_tokens': 100,
-          'top_p': 0.1,
+          'temperature': 0.5,
+          'max_tokens': 250,
+          'top_p': 0.7,
           'frequency_penalty': 0.0,
           'presence_penalty': 0.0,
         }),
@@ -105,7 +112,12 @@ class DeepSeekService {
           'messages': [
             {
               'role': 'system',
-              'content': '''You are a native Kinyarwanda speaker. You must respond in Kinyarwanda only.
+              'content': '''You are a native Kinyarwanda tutor and conversation partner. Your role is to:
+1. Respond ONLY in Kinyarwanda using proper Latin characters
+2. Help users learn and practice Kinyarwanda
+3. Provide natural, conversational responses
+4. Use proper grammar and vocabulary
+5. Be encouraging and supportive
 
 Example responses:
 - For greetings: "Muraho", "Amakuru", "Mwaramutse"
@@ -113,16 +125,17 @@ Example responses:
 - For unclear messages: "Vuga Kinyarwanda gusa"
 - For English input: "Vuga Kinyarwanda gusa"
 
-Keep responses short and natural.'''
+NEVER respond with question marks only. Always provide meaningful Kinyarwanda text.
+Keep responses natural, educational, and engaging.'''
             },
             {
               'role': 'user',
               'content': message
             }
           ],
-          'temperature': 0.5,
-          'max_tokens': 50,
-          'top_p': 0.5,
+          'temperature': 0.6,
+          'max_tokens': 200,
+          'top_p': 0.8,
           'frequency_penalty': 0.0,
           'presence_penalty': 0.0,
         }),
@@ -149,12 +162,12 @@ Keep responses short and natural.'''
         return "Ntago byumvikana";
       }
       
-      // Remove any English words
-      content = content.replaceAll(RegExp(r'[a-zA-Z]'), '').trim();
-      
-      // If content is empty after removing English, return default message
-      if (content.isEmpty) {
-        return "Ntago byumvikana";
+      // Kinyarwanda uses Latin alphabet, so we don't remove Latin characters
+      // Instead, we'll check if the response contains at least some Kinyarwanda-specific characters
+      // or common Kinyarwanda words to validate it's actually Kinyarwanda
+      if (!_containsKinyarwandaElements(content)) {
+        print('Response may not be valid Kinyarwanda: $content');
+        // Still return the content, but log the concern
       }
       
       return content;
@@ -172,12 +185,14 @@ Keep responses short and natural.'''
         return "Vuga Kinyarwanda gusa";
       }
       
-      // Remove any English words
-      content = content.replaceAll(RegExp(r'[a-zA-Z]'), '').trim();
-      
-      // If content is empty after removing English, return default message
-      if (content.isEmpty) {
-        return "Vuga Kinyarwanda gusa";
+      // Kinyarwanda uses Latin alphabet, so we don't remove Latin characters
+      // Instead, we'll check if the response contains at least some Kinyarwanda-specific elements
+      if (!_containsKinyarwandaElements(content)) {
+        print('Response may not be valid Kinyarwanda: $content');
+        // If the response is clearly in English, prompt for Kinyarwanda
+        if (_isEnglishOnly(content)) {
+          return "Vuga Kinyarwanda gusa";
+        }
       }
       
       return content;
@@ -194,6 +209,49 @@ Keep responses short and natural.'''
     };
   }
 
+  // Helper method to check if text contains Kinyarwanda elements
+  bool _containsKinyarwandaElements(String text) {
+    // Common Kinyarwanda words and phrases
+    final kinyarwandaWords = [
+      'muraho', 'amakuru', 'yego', 'oya', 'murakoze', 'ndagukunda',
+      'mwaramutse', 'mwiriwe', 'muramuke', 'kinyarwanda', 'rwanda',
+      'umunsi', 'mwiza', 'neza', 'mbega', 'ndashaka', 'ndabizi',
+      'ntabwo', 'vuga', 'gusa', 'witwa', 'nde', 'uva', 'he', 'urakora', 'iki'
+    ];
+    
+    // Check if text contains any Kinyarwanda words
+    final lowerText = text.toLowerCase();
+    for (final word in kinyarwandaWords) {
+      if (lowerText.contains(word)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  // Helper method to check if text is English only
+  bool _isEnglishOnly(String text) {
+    // Simple check for common English words
+    final englishWords = [
+      'the', 'and', 'is', 'in', 'to', 'have', 'it', 'that', 'for',
+      'you', 'he', 'with', 'on', 'do', 'say', 'this', 'they', 'at', 'but'
+    ];
+    
+    // Count English words
+    int englishWordCount = 0;
+    final words = text.toLowerCase().split(RegExp(r'\s+'));
+    
+    for (final word in words) {
+      if (englishWords.contains(word)) {
+        englishWordCount++;
+      }
+    }
+    
+    // If more than 30% of words are common English words, consider it English
+    return englishWordCount > (words.length * 0.3);
+  }
+  
   // ==================== CONVERSATION STARTERS ====================
   List<String> getConversationStarters() {
     return [
@@ -206,3 +264,5 @@ Keep responses short and natural.'''
     ];
   }
 }
+
+

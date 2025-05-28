@@ -1,7 +1,22 @@
 import 'package:afrilingo/widgets/auth/navigation_bar.dart';
+import 'package:afrilingo/services/language_course_service.dart';
+import 'package:afrilingo/services/lesson_service.dart';
+import 'package:afrilingo/models/course.dart';
+import 'package:afrilingo/models/lesson.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter/services.dart';
+import '../lesson.dart';
 import 'notifications.dart';
+
+// African-inspired color palette
+const Color kPrimaryColor = Color(0xFF8B4513); // Brown
+const Color kSecondaryColor = Color(0xFFC78539); // Light brown
+const Color kAccentColor = Color(0xFF546CC3); // Blue accent
+const Color kBackgroundColor = Color(0xFFF9F5F1); // Cream background
+const Color kTextColor = Color(0xFF333333); // Dark text
+const Color kLightTextColor = Color(0xFF777777); // Light text
+const Color kCardColor = Color(0xFFFFFFFF); // White card background
+const Color kDividerColor = Color(0xFFEEEEEE); // Light divider
 
 /// This widget uses a TabController to let the user switch between
 /// the "Course Review" and "Categories" subscreens.
@@ -14,12 +29,76 @@ class Courses extends StatefulWidget {
 
 class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final LanguageCourseService _courseService = LanguageCourseService();
+  final LessonService _lessonService = LessonService();
+  List<Course> _courses = [];
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     // Two tabs: "Course Review" and "Categories"
     _tabController = TabController(length: 2, vsync: this);
+    _loadCourses();
+  }
+
+  Future<void> _loadCourses() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final courses = await _courseService.getAllCourses();
+      setState(() {
+        _courses = courses;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _navigateToLessons(Course course) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      final lessons = await _lessonService.getLessonsByCourseId(course.id);
+      
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (!mounted) return;
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LessonScreen(
+            course: course,
+            lessons: lessons,
+          ),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading lessons: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -31,18 +110,74 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Light background color
-      backgroundColor: const Color.fromRGBO(239, 243, 251, 1),
+      backgroundColor: kBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        title: const Text(
+          'Kinyarwanda Courses',
+          style: TextStyle(
+            color: kTextColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none_outlined, color: kTextColor),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
-        child: Center(
-          // Constrain width for responsiveness (max width: 480)
-          child: SizedBox(
-            width: double.infinity,
             child: Column(
               children: [
-                // Curved header with a custom TabBar
-                _buildCurvedHeader(),
-                // Tab content that changes when a tab is tapped or swiped.
+            // Custom TabBar
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(26),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  color: kPrimaryColor,
+                ),
+                labelColor: Colors.white,
+                unselectedLabelColor: kLightTextColor,
+                labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
+                tabs: const [
+                  Tab(text: 'Course Review'),
+                  Tab(text: 'Categories'),
+                ],
+              ),
+            ),
+            
+            // Tab content
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
@@ -55,8 +190,6 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                   ),
                 ),
               ],
-            ),
-          ),
         ),
       ),
       // Bottom Navigation Bar
@@ -64,301 +197,478 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
     );
   }
 
-  /// Builds the curved header that includes a TabBar.
-  Widget _buildCurvedHeader() {
-    return Container(
-      height: 160,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(41),
-          bottomRight: Radius.circular(40),
-        ),
-      ),
-      child: Stack(
-        children: [
-          // Centered title (optional)
-          const Align(
-            alignment: Alignment.center,
-            child: Text(
-              'Kinyarwanda-Courses',
+  /// "Course Review" tab content: displays clickable chapter tiles.
+  Widget _buildCourseReviewTab() {
+    if (_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(kPrimaryColor),
+              strokeWidth: 3,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Loading courses...',
               style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
+                color: kLightTextColor,
+                fontSize: 16,
               ),
             ),
-          ),
-          // Bell icon at the top-right
-          Positioned(
-            right: 28,
-            top: 27,
-            child: IconButton(
-              icon: const Icon(Icons.notifications, color: Colors.black),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const NotificationsScreen()),
-                );
-              },
+          ],
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.red,
+              size: 64,
             ),
-          ),
-          // TabBar positioned at the bottom of the header.
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 44),
-              child: TabBar(
-                controller: _tabController,
-                onTap: (index) {
-                  // Tapping a tab will update the TabBarView automatically.
-                  setState(() {}); // Trigger rebuild if needed.
-                },
-                indicatorColor: const Color.fromRGBO(0, 110, 150, 1),
-                indicatorWeight: 2,
-                labelColor: Colors.black,
-                unselectedLabelColor: Colors.black54,
-                labelStyle: const TextStyle(
-                  fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
-                  fontWeight: FontWeight.w600,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
-                  fontWeight: FontWeight.w400,
-                ),
-                tabs: const [
-                  Tab(text: 'Course Review'),
-                  Tab(text: 'Categories'),
-                ],
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load courses',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: kTextColor,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadCourses,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kPrimaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_courses.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.school_outlined,
+              size: 80,
+              color: Colors.grey.shade300,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No courses available yet',
+              style: TextStyle(
+                fontSize: 18,
+                color: kLightTextColor,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadCourses,
+      color: kPrimaryColor,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _courses.length,
+        itemBuilder: (context, index) {
+          final course = _courses[index];
+          // Create a random color for each course
+          final colors = [
+            const Color(0xFFFCE4EC), // pink light
+            const Color(0xFFE1F5FE), // light blue
+            const Color(0xFFF1F8E9), // light green
+            const Color(0xFFFFF3E0), // light orange
+            const Color(0xFFE8EAF6), // light indigo
+          ];
+          final color = colors[index % colors.length];
+          
+          return _buildCourseCard(
+            course: course,
+            color: color,
+            index: index,
+          );
+        },
       ),
     );
   }
 
-  /// "Course Review" tab content: displays clickable chapter tiles.
-  Widget _buildCourseReviewTab() {
-    return SingleChildScrollView(
+  Widget _buildCourseCard({
+    required Course course, 
+    required Color color,
+    required int index,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: () => _navigateToLessons(course),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: kCardColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
       child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // First group: chapters 1 and 2.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(21, 24, 21, 15),
-            child: Column(
-              children: [
-                _buildChapterTile(
-                  chapter: '1',
-                  title: 'Important Phrases in Kinyarwanda',
-                  color: const Color.fromRGBO(252, 124, 108, 0.39),
-                  imageUrl:
-                      'https://cdn.builder.io/api/v1/image/assets/TEMP/2b14c4bce83d00b08e536caa51d8a3cbacc01ca3eef32e2b0fe8cd9b52baddc4',
-                  onTap: () => debugPrint("Chapter 1 tapped"),
+              // Course header with background color
+              Container(
+                height: 120,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
                 ),
-                const SizedBox(height: 13),
-                _buildChapterTile(
-                  chapter: '2',
-                  title: 'Introductions in Kinyarwanda',
-                  color: const Color.fromRGBO(86, 123, 243, 0.49),
-                  imageUrl:
-                      'https://cdn.builder.io/api/v1/image/assets/TEMP/dfc79d4f9709cb7bbbef48c8f0f954d1014def763439c3dd6a912538a91a40fe',
-                  onTap: () => debugPrint("Chapter 2 tapped"),
+                child: Stack(
+                  children: [
+                    // Course image
+                    Positioned(
+                      right: 20,
+                      bottom: 0,
+                      child: Image.network(
+                        course.image,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(Icons.school, size: 80, color: kPrimaryColor);
+                        },
+                      ),
+                    ),
+                    // Chapter badge
+                    Positioned(
+                      left: 16,
+                      top: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          'Chapter ${course.id}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: kPrimaryColor,
+                          ),
+                        ),
+                      ),
                 ),
               ],
             ),
           ),
-          // Second group: chapters 3, 4, 5, and 6.
+              
+              // Course content
           Padding(
-            padding: const EdgeInsets.fromLTRB(21, 13, 21, 17),
+                padding: const EdgeInsets.all(16),
             child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Course title
+                    Text(
+                      course.title,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: kTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Course description
+                    Text(
+                      course.description ?? 'Learn key vocabulary and phrases for everyday conversations.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: kLightTextColor,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 16),
+                    // Course details
+                    Row(
               children: [
-                _buildChapterTile(
-                  chapter: '3',
-                  title: 'More essential Phrases',
-                  color: const Color.fromRGBO(79, 75, 69, 0.54),
-                  imageUrl:
-                      'https://cdn.builder.io/api/v1/image/assets/TEMP/c2689b060ad59efb4a351a3b823513141c3605cf0dc153330685f40c891c49fe',
-                  onTap: () => debugPrint("Chapter 3 tapped"),
-                ),
-                const SizedBox(height: 13),
-                _buildChapterTile(
-                  chapter: '4',
-                  title: 'Simple adjectives and numbers',
-                  color: const Color.fromRGBO(178, 103, 134, 0.31),
-                  imageUrl:
-                      'https://cdn.builder.io/api/v1/image/assets/TEMP/ebf22147e24521155f8951add819f403fd34566dfa3a863f14396249f162d682',
-                  onTap: () => debugPrint("Chapter 4 tapped"),
-                ),
-                const SizedBox(height: 13),
-                _buildChapterTile(
-                  chapter: '5',
-                  title: 'Verbs and Tenses',
-                  color: const Color.fromRGBO(88, 40, 5, 0.48),
-                  imageUrl:
-                      'https://cdn.builder.io/api/v1/image/assets/TEMP/123a4b229fc09fd69a5154988df2fc0bb7db81b1483a1ceb00173f7e9bfdfc85',
-                  onTap: () => debugPrint("Chapter 5 tapped"),
-                ),
-                const SizedBox(height: 13),
-                _buildChapterTile(
-                  chapter: '6',
-                  title: 'Common expresions and preoverbs',
-                  color: const Color.fromRGBO(244, 213, 149, 0.77),
-                  imageUrl:
-                      'https://cdn.builder.io/api/v1/image/assets/TEMP/b0a56aece2fbb64dc6cf0f89bcd43a26f2e432fa33180f9d901a808ed374a5ee',
-                  onTap: () => debugPrint("Chapter 6 tapped"),
+                        _buildCourseDetailItem(
+                          icon: Icons.access_time,
+                          text: '${10 + index * 5} lessons',
+                        ),
+                        const SizedBox(width: 16),
+                        _buildCourseDetailItem(
+                          icon: Icons.bolt_outlined,
+                          text: '${index * 10 + 50}% complete',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Start/Continue button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => _navigateToLessons(course),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kPrimaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Start Learning',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                 ),
               ],
             ),
           ),
         ],
       ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCourseDetailItem({required IconData icon, required String text}) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: kLightTextColor,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 14,
+            color: kLightTextColor,
+          ),
+        ),
+      ],
     );
   }
 
   /// "Categories" tab content: displays a clickable search bar and category items.
   Widget _buildCategoriesTab() {
+    // Categories list
+    final categories = [
+      {
+        'title': 'Foundations',
+        'description': 'Learn the basics of Kinyarwanda',
+        'icon': Icons.school_outlined,
+        'color': Colors.blue,
+      },
+      {
+        'title': 'Daily Life',
+        'description': 'Essential phrases for everyday situations',
+        'icon': Icons.home_outlined,
+        'color': Colors.green,
+      },
+      {
+        'title': 'Expanding Expression',
+        'description': 'Enhance your vocabulary and fluency',
+        'icon': Icons.auto_stories_outlined,
+        'color': Colors.orange,
+      },
+      {
+        'title': 'Society and Culture',
+        'description': 'Understand Rwandan traditions and customs',
+        'icon': Icons.people_outlined,
+        'color': Colors.purple,
+      },
+      {
+        'title': 'Comprehension',
+        'description': 'Practice understanding spoken Kinyarwanda',
+        'icon': Icons.hearing_outlined,
+        'color': Colors.red,
+      },
+      {
+        'title': 'Advanced Communication',
+        'description': 'Master complex conversations and topics',
+        'icon': Icons.forum_outlined,
+        'color': Colors.teal,
+      },
+      {
+        'title': 'Creation and Analysis',
+        'description': 'Create and analyze written content',
+        'icon': Icons.create_outlined,
+        'color': Colors.indigo,
+      },
+    ];
+    
     return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.all(16),
         child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Interactive search bar with a writing cursor
-            TextField(
+          // Search bar
+          Container(
+            decoration: BoxDecoration(
+              color: kCardColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search',
-                hintStyle: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Color.fromRGBO(0, 0, 0, 0.28),
-                ),
-                prefixIcon:
-                    const Icon(Icons.search, size: 28, color: Colors.grey),
-                filled: true,
-                fillColor: const Color.fromRGBO(196, 196, 196, 0.27),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
-                  borderSide: const BorderSide(
-                    color: Color.fromRGBO(126, 143, 205, 1),
-                    width: 3,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
-                  borderSide: const BorderSide(
-                    color: Colors.blue, // Change color on focus
-                    width: 3,
-                  ),
-                ),
+                hintText: 'Search for categories...',
+                hintStyle: TextStyle(color: kLightTextColor),
+                prefixIcon: Icon(Icons.search, color: kLightTextColor),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
             ),
-            const SizedBox(height: 16),
-            // List of category items
-            _buildCategoryItem('Foundations'),
-            const SizedBox(height: 13),
-            _buildCategoryItem('Daily Life'),
-            const SizedBox(height: 13),
-            _buildCategoryItem('Expanding expression'),
-            const SizedBox(height: 13),
-            _buildCategoryItem('Society and culture'),
-            const SizedBox(height: 13),
-            _buildCategoryItem('Comprehension and explanation'),
-            const SizedBox(height: 13),
-            _buildCategoryItem('Advanced communication'),
-            const SizedBox(height: 13),
-            _buildCategoryItem('Creation and analysis'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Builds a clickable chapter tile (for the Course Review tab).
-Widget _buildChapterTile({
-  required String chapter,
-  required String title,
-  required Color color,
-  required String imageUrl,
-  required VoidCallback onTap,
-}) {
-  return InkWell(
-    onTap: onTap,
-    child: Container(
-      height: 90,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: color,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 23),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Chapter text and title.
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Chapter $chapter',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
-                ),
-              ),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
-                ),
-              ),
-            ],
           ),
-          // Chapter icon image.
-          Image.network(
-            imageUrl,
-            width: 50,
-            fit: BoxFit.contain,
+          const SizedBox(height: 24),
+          
+          // Categories section title
+          const Text(
+            'Learning Categories',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: kTextColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+              Text(
+            'Explore these categories to master Kinyarwanda',
+            style: TextStyle(
+              fontSize: 14,
+              color: kLightTextColor,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Categories list
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              return _buildCategoryItem(
+                title: category['title'] as String,
+                description: category['description'] as String,
+                icon: category['icon'] as IconData,
+                color: category['color'] as Color,
+              );
+            },
           ),
         ],
-      ),
     ),
   );
 }
 
 /// Builds a clickable category item (for the Categories tab).
-Widget _buildCategoryItem(String title) {
-  return InkWell(
-    onTap: () => debugPrint("$title tapped"),
-    child: Container(
-      height: 60,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: Colors.white,
-        border: Border.all(
-          color: const Color.fromRGBO(0, 0, 0, 0.6),
-          width: 1,
+  Widget _buildCategoryItem({
+    required String title,
+    required String description,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: InkWell(
+          onTap: () => debugPrint("$title tapped"),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Category icon
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color),
+                ),
+                const SizedBox(width: 16),
+                // Category details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
             style: const TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w600,
-              fontFamily: 'Noto Sans Devanagari UI SemiCondensed',
+                          fontWeight: FontWeight.bold,
+                          color: kTextColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: kLightTextColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                // Arrow icon
+                const Icon(
+                  Icons.chevron_right,
+                  color: kLightTextColor,
+                ),
+              ],
             ),
           ),
-          const Icon(Icons.chevron_right),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

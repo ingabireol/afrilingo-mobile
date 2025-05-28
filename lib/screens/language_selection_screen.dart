@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/language.dart';
 import '../services/language_course_service.dart';
 import 'course_list_screen.dart';
-import 'admin/add_language_screen.dart';
-import 'admin/add_course_screen.dart';
+
 
 class LanguageSelectionScreen extends StatefulWidget {
   const LanguageSelectionScreen({super.key});

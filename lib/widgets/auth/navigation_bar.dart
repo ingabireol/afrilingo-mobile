@@ -38,33 +38,60 @@ class CustomBottomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: selectedIndex,
-      onTap: (index) => _onBottomNavTap(context, index),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard_outlined),
-          label: 'Home',
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(25),
+        child: BottomNavigationBar(
+          currentIndex: selectedIndex,
+          onTap: (index) => _onBottomNavTap(context, index),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: const Color(0xFF8B4513),
+          unselectedItemColor: Colors.grey.shade400,
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 12,
+          ),
+          items: [
+            _buildNavItem(Icons.dashboard_outlined, Icons.dashboard, 'Home', 0),
+            _buildNavItem(Icons.folder_outlined, Icons.folder, 'File', 1),
+            _buildNavItem(Icons.translate_outlined, Icons.translate, 'Translate', 2),
+            _buildNavItem(Icons.stars_outlined, Icons.stars, 'Challenges', 3),
+            _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 4),
+          ],
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.folder_outlined),
-          label: 'File',
+      ),
+    );
+  }
+
+  BottomNavigationBarItem _buildNavItem(IconData icon, IconData activeIcon, String label, int index) {
+    return BottomNavigationBarItem(
+      icon: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: selectedIndex == index ? const Color(0xFF8B4513).withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.translate_outlined),
-          label: 'Translate',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.stars_outlined),
-          label: 'Challenges',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          label: 'Profile',
-        ),
-      ],
-      selectedItemColor: const Color(0xFF8B4513),
-      unselectedItemColor: const Color(0xFFDEB887),
+        child: Icon(selectedIndex == index ? activeIcon : icon),
+      ),
+      label: label,
     );
   }
 }

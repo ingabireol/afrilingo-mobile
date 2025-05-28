@@ -2,12 +2,23 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import '../services/deepseek_service.dart';
 import '../widgets/auth/navigation_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+// African-inspired color palette
+const Color kPrimaryColor = Color(0xFF8B4513); // Brown
+const Color kSecondaryColor = Color(0xFFC78539); // Light brown
+const Color kAccentColor = Color(0xFF546CC3); // Blue accent
+const Color kBackgroundColor = Color(0xFFF9F5F1); // Cream background
+const Color kTextColor = Color(0xFF333333); // Dark text
+const Color kLightTextColor = Color(0xFF777777); // Light text
+const Color kCardColor = Color(0xFFFFFFFF); // White card background
+const Color kDividerColor = Color(0xFFEEEEEE); // Light divider
 
 // Chat message widget
 class ChatMessage extends StatelessWidget {
@@ -33,7 +44,7 @@ class ChatMessage extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isUser ? Colors.brown[100] : Colors.grey[200],
+          color: isUser ? kPrimaryColor.withOpacity(0.1) : kCardColor,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
@@ -42,6 +53,9 @@ class ChatMessage extends StatelessWidget {
               offset: const Offset(0, 1),
             ),
           ],
+          border: isUser 
+              ? null 
+              : Border.all(color: kDividerColor),
         ),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
@@ -49,7 +63,7 @@ class ChatMessage extends StatelessWidget {
         child: Text(
           text,
           style: TextStyle(
-            color: isUser ? Colors.black87 : Colors.black,
+            color: isUser ? kPrimaryColor : kTextColor,
             fontSize: 16,
             height: 1.4,
           ),
@@ -444,15 +458,37 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: kBackgroundColor,
       appBar: AppBar(
-        title: const Text('Kinyarwanda Assistant'),
-        backgroundColor: Colors.brown[700],
-        elevation: 2,
+        title: const Text(
+          'Kinyarwanda Assistant',
+          style: TextStyle(
+            color: kTextColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: kTextColor),
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
         actions: [
-          IconButton(
-            icon: Icon(_isTranslationMode ? Icons.translate : Icons.chat),
-            onPressed: _showModeSelectionDialog,
-            tooltip: 'Change Mode',
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _isTranslationMode
+                  ? kAccentColor.withOpacity(0.1)
+                  : kPrimaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: IconButton(
+              icon: Icon(
+                _isTranslationMode ? Icons.translate : Icons.chat,
+                color: _isTranslationMode ? kAccentColor : kPrimaryColor,
+              ),
+              onPressed: _showModeSelectionDialog,
+              tooltip: 'Change Mode',
+            ),
           ),
         ],
       ),
@@ -460,25 +496,52 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         children: [
           // Mode indicator
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            color: _isTranslationMode ? Colors.blue[50] : Colors.green[50],
-            child: Center(
-              child: Text(
-                _isTranslationMode
-                    ? 'Translation Mode: English → Kinyarwanda'
-                    : 'Chat Mode: Let\'s chat in Kinyarwanda!',
-                style: TextStyle(
-                  color: _isTranslationMode ? Colors.blue[900] : Colors.green[900],
-                  fontWeight: FontWeight.bold,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: _isTranslationMode
+                  ? kAccentColor.withOpacity(0.1)
+                  : kPrimaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _isTranslationMode ? Icons.translate : Icons.chat_bubble_outline,
+                  color: _isTranslationMode ? kAccentColor : kPrimaryColor,
                 ),
-              ),
+                const SizedBox(width: 12),
+                Text(
+                  _isTranslationMode
+                      ? 'Translation Mode: English → Kinyarwanda'
+                      : 'Chat Mode: Let\'s chat in Kinyarwanda!',
+                  style: TextStyle(
+                    color: _isTranslationMode ? kAccentColor : kPrimaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ),
           
           // Chat messages list
           Expanded(
             child: _isLoading && _messages.isEmpty
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(kPrimaryColor),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Initializing...',
+                          style: TextStyle(color: kLightTextColor),
+                        ),
+                      ],
+                    ),
+                  )
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
@@ -489,10 +552,28 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           
           // Loading indicator
           if (_isLoading && _messages.isNotEmpty)
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Center(
-                child: CircularProgressIndicator(),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(kPrimaryColor),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    _isTranslationMode ? 'Translating...' : 'Thinking...',
+                    style: TextStyle(
+                      color: kLightTextColor,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ),
             ),
           
@@ -500,7 +581,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: kCardColor,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -518,17 +599,39 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       hintText: _isTranslationMode
                           ? 'Enter English text to translate...'
                           : 'Type your message in Kinyarwanda...',
+                      hintStyle: TextStyle(color: kLightTextColor),
+                      filled: true,
+                      fillColor: kBackgroundColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      prefixIcon: Icon(
+                        _isTranslationMode ? Icons.translate : Icons.chat_bubble_outline,
+                        color: kLightTextColor,
                       ),
                     ),
                     onSubmitted: (_) => _handleMessage(_messageController.text.trim()),
                   ),
                 ),
                 const SizedBox(width: 12),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: () => _handleMessage(_messageController.text.trim()),
+                Container(
+                  decoration: BoxDecoration(
+                    color: kPrimaryColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: kPrimaryColor.withOpacity(0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white),
+                    onPressed: () => _handleMessage(_messageController.text.trim()),
+                  ),
                 ),
               ],
             ),

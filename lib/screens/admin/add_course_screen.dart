@@ -72,7 +72,7 @@ class _AddCourseScreenState extends State<AddCourseScreen> {
           id: 0, // ID will be assigned by the backend
           title: _titleController.text,
           description: _descriptionController.text,
-          imageUrl: _imageUrlController.text,
+          image: _imageUrlController.text,
           language: _selectedLanguage!,
           difficulty: _selectedDifficulty,
         );

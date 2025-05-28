@@ -2,9 +2,19 @@ import 'package:afrilingo/screens/translate_page.dart';
 import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
 
-class ListeningPage extends StatelessWidget {
-  const ListeningPage({Key? key}) : super(key: key);
+class ListeningPage extends StatefulWidget {
+  final int lessonId;
 
+  const ListeningPage({
+    Key? key,
+    required this.lessonId,
+  }) : super(key: key);
+
+  @override
+  State<ListeningPage> createState() => _ListeningPageState();
+}
+
+class _ListeningPageState extends State<ListeningPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -17,7 +27,9 @@ class ListeningPage extends StatelessWidget {
               child: Row(
                 children: [
                   InkWell(
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -144,11 +156,16 @@ class ListeningPage extends StatelessWidget {
 
                     // Submit button
                     ElevatedButton(
-                      onPressed: () {  Navigator.push(
+                      onPressed: () {
+                        Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const TranslationPage()),
-                      );},
+                            builder: (context) => TranslationPage(
+                              lessonId: widget.lessonId,
+                            ),
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFC49A6C),
                         foregroundColor: Colors.white,

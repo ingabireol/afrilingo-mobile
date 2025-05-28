@@ -6,7 +6,7 @@ import '../models/course.dart';
 
 class AdminService {
   // Base URL for API requests
-  static const String baseUrl = 'http://192.168.1.71:8080/api/v1';
+  static const String baseUrl = 'http://10.0.2.2:8080/api/v1';
   
   // Get auth token from shared preferences
   Future<String?> _getAuthToken() async {
@@ -138,7 +138,7 @@ class AdminService {
             id: DateTime.now().millisecondsSinceEpoch, // Generate a temporary ID
             title: course.title,
             description: course.description,
-            imageUrl: course.imageUrl,
+            image: course.image,
             language: course.language,
             difficulty: course.difficulty,
             isActive: course.isActive,
@@ -206,9 +206,9 @@ class AdminService {
 {
   "firstName": "Admin",
   "lastName": "User",
-  "email": "admin@afrilingo.com",
-  "password": "Admin@123",
-  "role": "ADMIN"
+  "email": "admin@gmail.com",
+  "password": "728728Clb@",
+  "role": "ROLE_ADMIN"
 }
 ''';
   }

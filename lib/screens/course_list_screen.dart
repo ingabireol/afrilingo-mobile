@@ -122,9 +122,9 @@ class _CourseListScreenState extends State<CourseListScreen> {
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: ListTile(
-            leading: course.imageUrl.isNotEmpty
+            leading: course.image.isNotEmpty
                 ? Image.network(
-                    course.imageUrl,
+                    course.image,
                     width: 50,
                     height: 50,
                     fit: BoxFit.cover,

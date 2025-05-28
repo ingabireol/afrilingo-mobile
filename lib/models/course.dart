@@ -4,7 +4,7 @@ class Course {
   final int id;
   final String title;
   final String description;
-  final String imageUrl;
+  final String image;
   final Language language;
   final String difficulty;
   final bool isActive;
@@ -13,13 +13,14 @@ class Course {
     required this.id,
     required this.title,
     required this.description,
-    required this.imageUrl,
+    required this.image,
     required this.language,
     required this.difficulty,
     this.isActive = true,
   });
 
   factory Course.fromJson(Map<String, dynamic> json) {
+    try {
     // Handle different field names that might come from the API
     Language courseLanguage;
     
@@ -40,7 +41,7 @@ class Course {
     } else if (json.containsKey('languageId')) {
       // If we only have languageId, create a minimal Language object
       courseLanguage = Language(
-        id: json['languageId'],
+          id: json['languageId'] is int ? json['languageId'] : 0,
         name: 'Unknown',
         code: 'unknown',
         description: '',
@@ -58,14 +59,18 @@ class Course {
     }
     
     return Course(
-      id: json['id'] ?? 0,
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      imageUrl: json['imageUrl'] ?? json['image'] ?? '',  // Prioritize imageUrl over image
+        id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
+        title: json['title']?.toString() ?? 'Untitled Course',
+        description: json['description']?.toString() ?? '',
+        image: json['image']?.toString() ?? '',
       language: courseLanguage,
-      difficulty: json['difficulty'] ?? json['level'] ?? 'BEGINNER',  // Prioritize difficulty over level
-      isActive: json['isActive'] ?? json['active'] ?? true,  // Prioritize isActive over active
+        difficulty: json['difficulty']?.toString() ?? 'Beginner',
+        isActive: json['isActive'] is bool ? json['isActive'] : true,
     );
+    } catch (e) {
+      print('Error parsing course data: $e');
+      throw FormatException('Failed to parse course data: $e');
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -73,10 +78,10 @@ class Course {
       'id': id,
       'title': title,
       'description': description,
-      'level': difficulty,
-      'image': imageUrl,
+      'image': image,
+      'language': language.toJson(),
+      'difficulty': difficulty,
       'isActive': isActive,
-      'language': {'id': language.id},
     };
   }
 }
