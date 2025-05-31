@@ -119,7 +119,7 @@ class _TranslationScreenState extends State<TranslationScreen> {
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
+                children: [
                       _buildLanguageSelector(_sourceLanguage),
                       GestureDetector(
                         onTap: _swapLanguages,

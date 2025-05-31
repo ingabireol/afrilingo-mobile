@@ -60,12 +60,33 @@ class _UserDashboardState extends State<UserDashboard> {
     final profilePicture = await UserCacheService.getCachedProfilePicture();
     final email = await UserCacheService.getCachedEmail();
     
-    print('Dashboard: Loaded cached info - firstName: "$firstName", email: $email');
+    // Try to get name from SharedPreferences as a backup
+    String displayName = firstName;
+    if (displayName.isEmpty || displayName == "Buntu" || displayName == "User") {
+      final prefs = await SharedPreferences.getInstance();
+      final storedFirstName = prefs.getString('user_firstName');
+      final storedName = prefs.getString('user_name'); // Some systems store as user_name
+      final storedUsername = prefs.getString('username');
+      
+      if (storedFirstName != null && storedFirstName.isNotEmpty) {
+        displayName = storedFirstName;
+      } else if (storedName != null && storedName.isNotEmpty) {
+        displayName = storedName;
+      } else if (storedUsername != null && storedUsername.isNotEmpty) {
+        displayName = storedUsername;
+      } else if (email != null && email.isNotEmpty) {
+        displayName = email.contains('@') ? email.split('@')[0] : email;
+      } else {
+        displayName = "Guest"; // Default to Guest instead of Buntu
+      }
+    }
+    
+    print('Dashboard: Loaded cached info - firstName: "$displayName", email: $email');
     
     if (mounted) {
       setState(() {
-        // Use cached firstName if available, otherwise use default "User"
-        _cachedFirstName = firstName.isNotEmpty ? firstName : "User";
+        // Use cached firstName if available, otherwise use default "Guest"
+        _cachedFirstName = displayName.isNotEmpty ? displayName : "Guest";
         _cachedProfilePicture = profilePicture;
         _cachedEmail = email;
       });
@@ -93,36 +114,63 @@ class _UserDashboardState extends State<UserDashboard> {
         },
       );
       
+      // First get the user's name from the new endpoint
+      print('Dashboard: Getting user name...');
+      final nameData = await profileService.getUserName();
+      String displayName = nameData['firstName'] ?? '';
+      
+      if (displayName.isEmpty) {
+        displayName = nameData['lastName'] ?? '';
+      }
+      
+      if (displayName.isEmpty && nameData['email'] != null && nameData['email']!.isNotEmpty) {
+        displayName = nameData['email']!.contains('@') 
+            ? nameData['email']!.split('@')[0] 
+            : nameData['email']!;
+      }
+      
+      // If we still don't have a name, try localStorage directly
+      if (displayName.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        final storedFirstName = prefs.getString('user_firstName');
+        final storedName = prefs.getString('user_name'); // Some systems store as user_name
+        final storedEmail = prefs.getString('user_email');
+        
+        if (storedFirstName != null && storedFirstName.isNotEmpty) {
+          displayName = storedFirstName;
+        } else if (storedName != null && storedName.isNotEmpty) {
+          displayName = storedName;
+        } else if (storedEmail != null && storedEmail.isNotEmpty) {
+          displayName = storedEmail.contains('@') 
+              ? storedEmail.split('@')[0] 
+              : storedEmail;
+        }
+      }
+      
+      // Last resort fallback - better than "User"
+      if (displayName.isEmpty) {
+        displayName = "Guest";
+      }
+      
+      // Update state with name data
+      if (mounted) {
+        setState(() {
+          _cachedFirstName = displayName;
+          if (nameData['email'] != null && nameData['email']!.isNotEmpty) {
+            _cachedEmail = nameData['email'];
+          }
+        });
+      }
+      
+      // Then get the full profile for other data
       print('Dashboard: Loading user profile...');
       final profile = await profileService.getCurrentUserProfile();
       print('Dashboard: Profile loaded - firstName: ${profile.firstName}, lastName: ${profile.lastName}, email: ${profile.email}');
-      
-      // Get the most appropriate display name
-      String displayName = '';
-      
-      if (profile.firstName != null && profile.firstName!.isNotEmpty) {
-        displayName = profile.firstName!;
-        print('Dashboard: Using firstName: $displayName');
-      } else if (profile.lastName != null && profile.lastName!.isNotEmpty) {
-        displayName = profile.lastName!;
-        print('Dashboard: Using lastName: $displayName');
-      } else if (profile.email != null && profile.email!.isNotEmpty) {
-        // Extract username from email
-        displayName = profile.email!.contains('@') 
-            ? profile.email!.split('@')[0] 
-            : profile.email!;
-        print('Dashboard: Using email-derived name: $displayName');
-      } else {
-        // Use Buntu Levy Caleb as default from mock data
-        displayName = "Buntu";
-        print('Dashboard: Using default mock name: $displayName');
-      }
       
       if (mounted) {
         setState(() {
           _profile = profile;
           // Update cached values with new data
-          _cachedFirstName = displayName;
           if (profile.email != null && profile.email!.isNotEmpty) {
             _cachedEmail = profile.email;
           }
@@ -146,11 +194,7 @@ class _UserDashboardState extends State<UserDashboard> {
         // Save to cache for faster loading next time
         await UserCacheService.cacheUserProfile(profile);
         
-        // Also cache these fields individually for quicker access
-        if (displayName.isNotEmpty) {
-          await UserCacheService.cacheFirstName(displayName);
-        }
-        
+        // Also cache individual fields for quicker access
         if (profile.email != null && profile.email!.isNotEmpty) {
           await UserCacheService.cacheEmail(profile.email!);
         }
@@ -161,13 +205,14 @@ class _UserDashboardState extends State<UserDashboard> {
         }
       }
     } catch (e) {
-      print('Dashboard: Error loading profile: $e');
+      print("Error in _loadUserProfile: $e");
       if (mounted) {
         setState(() {
           _isLoadingProfile = false;
-          // Use default mock name if profile loading fails
-          if (_cachedFirstName.isEmpty || _cachedFirstName == "User") {
-            _cachedFirstName = "Buntu";
+          
+          // Make sure we have some name to display
+          if (_cachedFirstName.isEmpty) {
+            _cachedFirstName = "Guest";
           }
         });
       }
@@ -315,9 +360,9 @@ class _UserDashboardState extends State<UserDashboard> {
 
   Widget _buildHeader(BuildContext context) {
     // Never show "Set up your profile" if we have a name
-    String displayText = _cachedFirstName.isNotEmpty 
+    String displayText = _cachedFirstName.isNotEmpty && _cachedFirstName != "Buntu"
         ? _cachedFirstName 
-        : "User"; // Default to "User" instead of "Set up your profile"
+        : "Guest"; // Default to "Guest" instead of "User" or "Buntu"
     
     print('Dashboard: Building header with name: $displayText');
     
@@ -371,7 +416,7 @@ class _UserDashboardState extends State<UserDashboard> {
               children: [
                 Text(
                   'Welcome back,',
-                  style: TextStyle(
+            style: TextStyle(
                     fontSize: 16,
                     color: Colors.white.withOpacity(0.8),
                   ),
@@ -381,9 +426,9 @@ class _UserDashboardState extends State<UserDashboard> {
                   displayText,
                   style: const TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.bold,
                     color: Colors.white,
-                  ),
+          ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
@@ -757,8 +802,8 @@ class _UserDashboardState extends State<UserDashboard> {
               _buildStatItem('Daily Streak', 
                   _streak > 0 ? _streak.toString() : '7', 
                   Icons.local_fire_department),
-        ],
-      ),
+            ],
+          ),
         ),
       ],
     );

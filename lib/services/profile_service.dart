@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/user_profile.dart';
 import 'user_cache_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileService {
   final String baseUrl;
@@ -433,18 +434,124 @@ class ProfileService {
     }
   }
 
+  Future<Map<String, String>> getUserName() async {
+    try {
+      final headers = await getHeaders();
+      print("Getting user name from $baseUrl/profile/name");
+      final response = await http
+          .get(Uri.parse('$baseUrl/profile/name'), headers: headers)
+          .timeout(_timeout);
+          
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final nameData = data['data'] as Map<String, dynamic>;
+        
+        print("Successfully retrieved user name: ${nameData['firstName']} ${nameData['lastName']}");
+        
+        // Cache the name data
+        if (nameData['firstName'] != null) {
+          await UserCacheService.cacheFirstName(nameData['firstName']);
+        }
+        if (nameData['email'] != null) {
+          await UserCacheService.cacheEmail(nameData['email']);
+        }
+        
+        return {
+          'firstName': nameData['firstName'] ?? '',
+          'lastName': nameData['lastName'] ?? '',
+          'email': nameData['email'] ?? ''
+        };
+      } else {
+        print("Failed to get user name. Status code: ${response.statusCode}");
+        print("Response body: ${response.body}");
+        
+        // Try getting user data from auth/me endpoint as fallback
+        try {
+          print("Trying fallback to auth/me endpoint");
+          final userResponse = await http
+              .get(Uri.parse('$baseUrl/auth/me'), headers: headers)
+              .timeout(_timeout);
+              
+          if (userResponse.statusCode == 200) {
+            final userData = json.decode(userResponse.body);
+            final user = userData['data'] ?? userData;
+            
+            print("Got user data from auth endpoint: ${user['firstName']}");
+            
+            // Cache the name data
+            if (user['firstName'] != null) {
+              await UserCacheService.cacheFirstName(user['firstName']);
+            }
+            if (user['email'] != null) {
+              await UserCacheService.cacheEmail(user['email']);
+            }
+            
+            return {
+              'firstName': user['firstName'] ?? '',
+              'lastName': user['lastName'] ?? '',
+              'email': user['email'] ?? ''
+            };
+          }
+        } catch (fallbackError) {
+          print("Error in name fallback: $fallbackError");
+        }
+        
+        throw Exception('Failed to get user name: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      print('Error getting user name: $e');
+      // Return cached data as fallback
+      final firstName = await UserCacheService.getCachedFirstName();
+      final email = await UserCacheService.getCachedEmail();
+      
+      // Avoid returning empty or default values
+      if (firstName.isNotEmpty && firstName != "User" && firstName != "Buntu") {
+        return {
+          'firstName': firstName,
+          'lastName': '',
+          'email': email ?? ''
+        };
+      }
+      
+      // If we don't have good cached data, try one more approach - get directly from localStorage
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final storedFirstName = prefs.getString('user_firstName');
+        final storedEmail = prefs.getString('user_email');
+        
+        if (storedFirstName != null && storedFirstName.isNotEmpty) {
+          print("Found user name in localStorage: $storedFirstName");
+          return {
+            'firstName': storedFirstName,
+            'lastName': prefs.getString('user_lastName') ?? '',
+            'email': storedEmail ?? ''
+          };
+        }
+      } catch (storageError) {
+        print("Error accessing localStorage: $storageError");
+      }
+      
+      // As a very last resort, return an empty map
+      return {
+        'firstName': '',
+        'lastName': '',
+        'email': ''
+      };
+    }
+  }
+
   // Create a mock profile for development when backend is not available
   UserProfile _createMockProfile() {
-    // Use the mock data from the backend DataLoaderService for consistency
+    // Use generic data instead of specific mock data
     return UserProfile(
       id: 1,
-      firstName: "Buntu",
-      lastName: "Levy Caleb",
-      email: "buntulevycaleb@gmail.com",
+      firstName: "Guest",
+      lastName: "User",
+      email: "guest@afrilingo.com",
       country: "Rwanda",
-      firstLanguage: "Kinyarwanda",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=buntu",
-      reasonToLearn: "To connect with my roots",
+      firstLanguage: "English",
+      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=guest",
+      reasonToLearn: "To learn African languages",
       languagesToLearn: [],
       dailyReminders: true,
       dailyGoalMinutes: 30,

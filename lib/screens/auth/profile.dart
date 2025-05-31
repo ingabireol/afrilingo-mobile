@@ -77,25 +77,37 @@ class _ProfilePageState extends State<ProfilePage> {
           };
         },
       );
+
+      // First get the user's name
+      print('Profile: Getting user name...');
+      final nameData = await profileService.getUserName();
+      if (mounted) {
+        setState(() {
+          _firstNameController.text = nameData['firstName'] ?? '';
+          _lastNameController.text = nameData['lastName'] ?? '';
+          _usernameController.text = nameData['email'] ?? '';
+        });
+      }
+      
+      // Then get the full profile for other data
+      print('Profile: Loading full profile...');
       final profile = await profileService.getCurrentUserProfile();
       if (mounted) {
         setState(() {
           _profile = profile;
-          _firstNameController.text = profile.firstName ?? '';
-          _lastNameController.text = profile.lastName ?? '';
-          _usernameController.text = profile.email ?? '';
           _firstLanguageController.text = profile.firstLanguage ?? '';
           _isLoading = false;
         });
+        
         // Update cache
         await UserCacheService.cacheUserProfile(profile);
         
-        // Also cache these fields individually for quicker access
-        if (profile.firstName != null) {
-          await UserCacheService.cacheFirstName(profile.firstName!);
+        // Also cache individual fields for quicker access
+        if (nameData['firstName'] != null) {
+          await UserCacheService.cacheFirstName(nameData['firstName']!);
         }
-        if (profile.email != null) {
-          await UserCacheService.cacheEmail(profile.email!);
+        if (nameData['email'] != null) {
+          await UserCacheService.cacheEmail(nameData['email']!);
         }
       }
     } catch (e) {
@@ -286,13 +298,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   bottomLeft: Radius.circular(32),
                   bottomRight: Radius.circular(32),
                 ),
-              ),
+                        ),
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
@@ -304,18 +316,18 @@ class _ProfilePageState extends State<ProfilePage> {
                           backgroundImage: profile.profilePicture != null && profile.profilePicture!.isNotEmpty
                               ? NetworkImage(profile.profilePicture!)
                               : const AssetImage('assets/images/profile.jpg') as ImageProvider,
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
+                              ),
+                            ),
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
                         child: GestureDetector(
                           onTap: _changeProfilePicture,
-                          child: Container(
+                              child: Container(
                             padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.2),
@@ -323,26 +335,26 @@ class _ProfilePageState extends State<ProfilePage> {
                                   offset: const Offset(0, 2),
                                 ),
                               ],
-                            ),
-                            child: Container(
+                                ),
+                                child: Container(
                               width: 32,
                               height: 32,
-                              decoration: const BoxDecoration(
+                                  decoration: const BoxDecoration(
                                 color: kAccentColor,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
                                 Icons.camera_alt,
-                                color: Colors.white,
+                                    color: Colors.white,
                                 size: 18,
                               ),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+              const SizedBox(height: 16),
                   Text(
                     // Show full name if available
                     '${profile.firstName ?? ''} ${profile.lastName ?? ''}'.trim(),

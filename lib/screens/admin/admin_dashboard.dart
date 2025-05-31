@@ -180,15 +180,15 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
           else
             Expanded(
               child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildLanguagesTab(),
-                  _buildCoursesTab(),
+              controller: _tabController,
+              children: [
+                _buildLanguagesTab(),
+                _buildCoursesTab(),
                 ],
               ),
             ),
-        ],
-      ),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           if (_tabController.index == 0) {
@@ -265,11 +265,11 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
                                 child: Image.network(
-                                  language.flagImage,
+                          language.flagImage,
                                   width: 60,
                                   height: 60,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
+                          errorBuilder: (context, error, stackTrace) =>
                                       const Icon(Icons.language, color: kPrimaryColor, size: 30),
                                 ),
                               )
@@ -312,15 +312,15 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                         ),
                       ),
                       Column(
-                        children: [
-                          IconButton(
+                    children: [
+                      IconButton(
                             icon: const Icon(Icons.edit, color: kAccentColor),
-                            onPressed: () => _showEditLanguageDialog(language),
+                        onPressed: () => _showEditLanguageDialog(language),
                             tooltip: 'Edit',
-                          ),
-                          IconButton(
+                      ),
+                      IconButton(
                             icon: Icon(Icons.delete, color: Colors.red.shade400),
-                            onPressed: () => _confirmDeleteLanguage(language),
+                        onPressed: () => _confirmDeleteLanguage(language),
                             tooltip: 'Delete',
                           ),
                         ],
@@ -413,10 +413,10 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                             width: double.infinity,
                             color: kPrimaryColor.withOpacity(0.1),
                             child: course.image.isNotEmpty
-                                ? Image.network(
-                                    course.image,
+                      ? Image.network(
+                          course.image,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) =>
+                          errorBuilder: (context, error, stackTrace) =>
                                         const Center(child: Icon(Icons.image_not_supported, size: 40)),
                                   )
                                 : const Center(child: Icon(Icons.book, size: 40)),
@@ -467,8 +467,8 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                                     const Icon(Icons.language, size: 16, color: kPrimaryColor),
                                     const SizedBox(width: 4),
                                     Text(
@@ -527,24 +527,24 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               TextButton.icon(
-                                icon: const Icon(Icons.edit),
+                        icon: const Icon(Icons.edit),
                                 label: const Text('Edit'),
-                                onPressed: () => _showEditCourseDialog(course),
+                        onPressed: () => _showEditCourseDialog(course),
                                 style: TextButton.styleFrom(
                                   foregroundColor: kAccentColor,
-                                ),
+                      ),
                               ),
                               const SizedBox(width: 8),
                               TextButton.icon(
-                                icon: const Icon(Icons.delete),
+                        icon: const Icon(Icons.delete),
                                 label: const Text('Delete'),
-                                onPressed: () => _confirmDeleteCourse(course),
+                        onPressed: () => _confirmDeleteCourse(course),
                                 style: TextButton.styleFrom(
                                   foregroundColor: Colors.red.shade400,
                                 ),
-                              ),
-                            ],
-                          ),
+                      ),
+                    ],
+                  ),
                         ],
                       ),
                     ),
@@ -908,24 +908,24 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: DropdownButtonFormField<String>(
-                  value: selectedDifficulty,
+                value: selectedDifficulty,
                   decoration: const InputDecoration(
                     labelText: 'Difficulty',
                     prefixIcon: Icon(Icons.signal_cellular_alt),
                     border: InputBorder.none,
                   ),
-                  items: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED']
-                      .map((difficulty) => DropdownMenuItem(
-                            value: difficulty,
-                            child: Text(difficulty),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      selectedDifficulty = value;
-                    }
-                  },
-                ),
+                items: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED']
+                    .map((difficulty) => DropdownMenuItem(
+                          value: difficulty,
+                          child: Text(difficulty),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    selectedDifficulty = value;
+                  }
+                },
+              ),
               ),
               
               const SizedBox(height: 16),
@@ -938,23 +938,23 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: DropdownButtonFormField<int>(
-                  value: selectedLanguageId,
+                value: selectedLanguageId,
                   decoration: const InputDecoration(
                     labelText: 'Language',
                     prefixIcon: Icon(Icons.language),
                     border: InputBorder.none,
                   ),
-                  items: _languages
-                      .map((language) => DropdownMenuItem(
-                            value: language.id,
-                            child: Text(language.name),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      selectedLanguageId = value;
-                    }
-                  },
+                items: _languages
+                    .map((language) => DropdownMenuItem(
+                          value: language.id,
+                          child: Text(language.name),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    selectedLanguageId = value;
+                  }
+                },
                 ),
               ),
             ],
@@ -1083,24 +1083,24 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: DropdownButtonFormField<String>(
-                  value: selectedDifficulty,
+                value: selectedDifficulty,
                   decoration: const InputDecoration(
                     labelText: 'Difficulty',
                     prefixIcon: Icon(Icons.signal_cellular_alt),
                     border: InputBorder.none,
                   ),
-                  items: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED']
-                      .map((difficulty) => DropdownMenuItem(
-                            value: difficulty,
-                            child: Text(difficulty),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      selectedDifficulty = value;
-                    }
-                  },
-                ),
+                items: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED']
+                    .map((difficulty) => DropdownMenuItem(
+                          value: difficulty,
+                          child: Text(difficulty),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    selectedDifficulty = value;
+                  }
+                },
+              ),
               ),
               
               const SizedBox(height: 16),
@@ -1113,23 +1113,23 @@ class _AdminDashboardState extends State<AdminDashboard> with SingleTickerProvid
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: DropdownButtonFormField<int>(
-                  value: selectedLanguageId,
+                value: selectedLanguageId,
                   decoration: const InputDecoration(
                     labelText: 'Language',
                     prefixIcon: Icon(Icons.language),
                     border: InputBorder.none,
                   ),
-                  items: _languages
-                      .map((language) => DropdownMenuItem(
-                            value: language.id,
-                            child: Text(language.name),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      selectedLanguageId = value;
-                    }
-                  },
+                items: _languages
+                    .map((language) => DropdownMenuItem(
+                          value: language.id,
+                          child: Text(language.name),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    selectedLanguageId = value;
+                  }
+                },
                 ),
               ),
             ],
