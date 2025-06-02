@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:afrilingo/services/profile_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:afrilingo/models/user_profile.dart';
+import 'package:afrilingo/services/user_cache_service.dart';
+import 'package:afrilingo/services/profile_service.dart';
+import 'package:afrilingo/utils/profile_image_helper.dart';
 import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:afrilingo/services/user_cache_service.dart';
 
 // African-inspired color palette
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
@@ -32,9 +33,10 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _firstLanguageController = TextEditingController();
+  final TextEditingController _firstLanguageController =
+      TextEditingController();
   bool _isSavingProfile = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -58,12 +60,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _fetchProfile() async {
     if (!mounted) return;
-    
+
     setState(() {
       if (_profile == null) _isLoading = true;
       _error = null;
     });
-    
+
     try {
       final profileService = ProfileService(
         baseUrl: 'http://10.0.2.2:8080/api/v1',
@@ -88,7 +90,7 @@ class _ProfilePageState extends State<ProfilePage> {
           _usernameController.text = nameData['email'] ?? '';
         });
       }
-      
+
       // Then get the full profile for other data
       print('Profile: Loading full profile...');
       final profile = await profileService.getCurrentUserProfile();
@@ -98,10 +100,10 @@ class _ProfilePageState extends State<ProfilePage> {
           _firstLanguageController.text = profile.firstLanguage ?? '';
           _isLoading = false;
         });
-        
+
         // Update cache
         await UserCacheService.cacheUserProfile(profile);
-        
+
         // Also cache individual fields for quicker access
         if (nameData['firstName'] != null) {
           await UserCacheService.cacheFirstName(nameData['firstName']!);
@@ -153,7 +155,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _saveProfile() async {
     if (_profile == null) return;
-    setState(() { _isSavingProfile = true; });
+    setState(() {
+      _isSavingProfile = true;
+    });
     final profileService = ProfileService(
       baseUrl: 'http://10.0.2.2:8080/api/v1',
       getHeaders: () async {
@@ -166,7 +170,7 @@ class _ProfilePageState extends State<ProfilePage> {
         };
       },
     );
-    
+
     try {
       await profileService.createOrUpdateUserProfile({
         'firstName': _firstNameController.text,
@@ -176,7 +180,7 @@ class _ProfilePageState extends State<ProfilePage> {
         // Add other fields as needed
       });
       await _fetchProfile();
-      
+
       // Update the cache with the updated information
       if (_profile != null) {
         if (_firstNameController.text.isNotEmpty) {
@@ -185,7 +189,7 @@ class _ProfilePageState extends State<ProfilePage> {
         if (_usernameController.text.isNotEmpty) {
           await UserCacheService.cacheEmail(_usernameController.text);
         }
-        
+
         // Also cache entire profile to ensure consistency
         UserProfile updatedProfile = UserProfile(
           id: _profile!.id,
@@ -201,10 +205,10 @@ class _ProfilePageState extends State<ProfilePage> {
           preferredLearningTime: _profile!.preferredLearningTime,
           languagesToLearn: _profile!.languagesToLearn,
         );
-        
+
         await UserCacheService.cacheUserProfile(updatedProfile);
       }
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profile updated successfully!'),
@@ -219,7 +223,9 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       );
     } finally {
-      setState(() { _isSavingProfile = false; });
+      setState(() {
+        _isSavingProfile = false;
+      });
     }
   }
 
@@ -239,16 +245,30 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         centerTitle: true,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
+        actions: [
+          IconButton(
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: kTextColor,
+            ),
+            tooltip: 'Logout',
+            onPressed: () {
+              _showLogoutConfirmationDialog(context);
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: kPrimaryColor))
+            ? const Center(
+                child: CircularProgressIndicator(color: kPrimaryColor))
             : _error != null
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                        const Icon(Icons.error_outline,
+                            color: Colors.red, size: 48),
                         const SizedBox(height: 16),
                         Text(
                           'Error: $_error',
@@ -298,36 +318,35 @@ class _ProfilePageState extends State<ProfilePage> {
                   bottomLeft: Radius.circular(32),
                   bottomRight: Radius.circular(32),
                 ),
-                        ),
+              ),
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 3),
                         ),
-                        child: CircleAvatar(
+                        child: ProfileImageHelper.buildProfileAvatar(
+                          imageUrl: profile.profilePicture,
                           radius: 60,
-                          backgroundImage: profile.profilePicture != null && profile.profilePicture!.isNotEmpty
-                              ? NetworkImage(profile.profilePicture!)
-                              : const AssetImage('assets/images/profile.jpg') as ImageProvider,
-                              ),
-                            ),
-                            Positioned(
-                              right: 0,
-                              bottom: 0,
+                          backgroundColor: Colors.white24,
+                        ),
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
                         child: GestureDetector(
                           onTap: _changeProfilePicture,
-                              child: Container(
+                          child: Container(
                             padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.2),
@@ -335,29 +354,30 @@ class _ProfilePageState extends State<ProfilePage> {
                                   offset: const Offset(0, 2),
                                 ),
                               ],
-                                ),
-                                child: Container(
+                            ),
+                            child: Container(
                               width: 32,
                               height: 32,
-                                  decoration: const BoxDecoration(
+                              decoration: const BoxDecoration(
                                 color: kAccentColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
                                 Icons.camera_alt,
-                                    color: Colors.white,
+                                color: Colors.white,
                                 size: 18,
                               ),
-                                  ),
-                                ),
-                              ),
                             ),
-                          ],
+                          ),
                         ),
-              const SizedBox(height: 16),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   Text(
-                    // Show full name if available
-                    '${profile.firstName ?? ''} ${profile.lastName ?? ''}'.trim(),
+                    // Show full name from text controllers for consistency
+                    '${_firstNameController.text} ${_lastNameController.text}'
+                        .trim(),
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -367,9 +387,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 4),
                   // Show email or alternative text if not available
                   Text(
-                    _usernameController.text.isNotEmpty 
-                      ? _usernameController.text 
-                      : 'No email provided',
+                    _usernameController.text.isNotEmpty
+                        ? _usernameController.text
+                        : 'No email provided',
                     style: const TextStyle(
                       fontSize: 16,
                       color: Colors.white70,
@@ -379,9 +399,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Profile Information Cards
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -390,19 +410,19 @@ class _ProfilePageState extends State<ProfilePage> {
                 children: [
                   // Learning Progress Card
                   _buildProgressCard(),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Personal Information Card
                   _buildPersonalInfoCard(),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Achievements Card
                   _buildAchievementsCard(profile),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Save Button
                   SizedBox(
                     width: double.infinity,
@@ -431,12 +451,12 @@ class _ProfilePageState extends State<ProfilePage> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                                color: Colors.white,
                               ),
                             ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 32),
                 ],
               ),
@@ -448,75 +468,114 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildProgressCard() {
-    return Card(
-      elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.1),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-                  ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-            const Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                  'Learning Progress',
-                            style: TextStyle(
-                    fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                    color: kTextColor,
-                            ),
-                          ),
-                          Text(
-                            '50%',
-                            style: TextStyle(
-                    fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                    color: kPrimaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: 0.5,
-                minHeight: 12,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: const AlwaysStoppedAnimation<Color>(kPrimaryColor),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
+    return FutureBuilder<Map<String, dynamic>>(
+      future: ProfileService(
+        baseUrl: 'http://10.0.2.2:8080/api/v1',
+        getHeaders: () async {
+          final prefs = await SharedPreferences.getInstance();
+          final token = prefs.getString('auth_token');
+          if (token == null) throw Exception('No authentication token found');
+          return {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          };
+        },
+      ).getUserDashboard(),
+      builder: (context, snapshot) {
+        // Default values
+        int completedLessons = 0;
+        double progress = 0.0;
+
+        // Extract values from dashboard data if available
+        if (snapshot.hasData) {
+          final dashboardData = snapshot.data!;
+          if (dashboardData.containsKey('learningStats') &&
+              dashboardData['learningStats'] != null) {
+            completedLessons =
+                dashboardData['learningStats']['completedLessons'] ?? 0;
+          }
+
+          if (dashboardData.containsKey('courseProgress') &&
+              dashboardData['courseProgress'] != null &&
+              dashboardData['courseProgress'].isNotEmpty) {
+            // Get first course progress
+            progress = dashboardData['courseProgress'].values.first / 100.0;
+          }
+        }
+
+        return Card(
+          elevation: 4,
+          shadowColor: Colors.black.withOpacity(0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.auto_stories, color: kSecondaryColor, size: 20),
-                const SizedBox(width: 8),
-                const Text(
-                        'You completed 3 Chapters',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: kLightTextColor,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Learning Progress',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: kTextColor,
+                      ),
+                    ),
+                    Text(
+                      '${(progress * 100).toInt()}%',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: kPrimaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 12,
+                    backgroundColor: Colors.grey.shade200,
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(kPrimaryColor),
                   ),
                 ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    // Navigate to progress details
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: kAccentColor,
-                  ),
-                  child: const Text('Details'),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.auto_stories,
+                        color: kSecondaryColor, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'You completed $completedLessons ${completedLessons == 1 ? 'Chapter' : 'Chapters'}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: kLightTextColor,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () {
+                        // Navigate to progress details
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: kAccentColor,
+                      ),
+                      child: const Text('Details'),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -526,20 +585,20 @@ class _ProfilePageState extends State<ProfilePage> {
       shadowColor: Colors.black.withOpacity(0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-                  ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
               'Personal Information',
-                        style: TextStyle(
+              style: TextStyle(
                 fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.bold,
                 color: kTextColor,
-                        ),
-                      ),
+              ),
+            ),
             const SizedBox(height: 20),
 
             // Username (Email) - Read-only
@@ -562,19 +621,21 @@ class _ProfilePageState extends State<ProfilePage> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                suffixIcon: const Icon(Icons.lock_outline, color: kLightTextColor),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                suffixIcon:
+                    const Icon(Icons.lock_outline, color: kLightTextColor),
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // First Name
-                                const Text(
+            const Text(
               'First Name',
-                                  style: TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w500,
                 color: kLightTextColor,
-                                    fontSize: 14,
+                fontSize: 14,
               ),
             ),
             const SizedBox(height: 8),
@@ -587,12 +648,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: kDividerColor),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 hintText: 'Enter your first name',
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Last Name
             const Text(
               'Last Name',
@@ -600,9 +662,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 fontWeight: FontWeight.w500,
                 color: kLightTextColor,
                 fontSize: 14,
-                            ),
-                        ),
-                      const SizedBox(height: 8),
+              ),
+            ),
+            const SizedBox(height: 8),
             TextField(
               controller: _lastNameController,
               decoration: InputDecoration(
@@ -612,19 +674,20 @@ class _ProfilePageState extends State<ProfilePage> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: kDividerColor),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 hintText: 'Enter your last name',
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // First Language
-                                const Text(
+            const Text(
               'First Language',
-                                  style: TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w500,
                 color: kLightTextColor,
-                                    fontSize: 14,
+                fontSize: 14,
               ),
             ),
             const SizedBox(height: 8),
@@ -637,133 +700,260 @@ class _ProfilePageState extends State<ProfilePage> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: kDividerColor),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 hintText: 'Enter your first language',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildAchievementsCard(UserProfile profile) {
-    return Card(
-      elevation: 4,
-      shadowColor: Colors.black.withOpacity(0.1),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-                  ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-              'Achievements',
-                        style: TextStyle(
-                fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                color: kTextColor,
-                        ),
-                      ),
-            const SizedBox(height: 16),
+    return FutureBuilder<int>(
+      future: ProfileService(
+        baseUrl: 'http://10.0.2.2:8080/api/v1',
+        getHeaders: () async {
+          final prefs = await SharedPreferences.getInstance();
+          final token = prefs.getString('auth_token');
+          if (token == null) throw Exception('No authentication token found');
+          return {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          };
+        },
+      ).getUserStreak(),
+      builder: (context, snapshot) {
+        // Default value
+        int streak = 0;
 
-            // Streaks
-            Row(
-                          children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                      ),
-                  child: const Icon(
-                    Icons.local_fire_department,
-                    color: Colors.orange,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                    Text(
-                      'Daily Streak',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: kLightTextColor,
-                        ),
-                      ),
-                            SizedBox(height: 4),
-                    Text(
-                      '3 days',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-              ),
+        // Use streak from API if available
+        if (snapshot.hasData) {
+          streak = snapshot.data!;
+        }
 
-            const SizedBox(height: 16),
-            const Divider(height: 1, color: kDividerColor),
-              const SizedBox(height: 16),
-
-            // Points
-            Row(
+        return Card(
+          elevation: 4,
+          shadowColor: Colors.black.withOpacity(0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                const Text(
+                  'Achievements',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: kTextColor,
                   ),
-                  child: const Icon(
-                    Icons.star,
-                    color: Colors.amber,
-                    size: 24,
                 ),
-              ),
-                const SizedBox(width: 16),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 16),
+
+                // Streaks
+                Row(
                   children: [
-                    Text(
-                      'Total Points',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: kLightTextColor,
-        ),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.local_fire_department,
+                        color: Colors.orange,
+                        size: 24,
+                      ),
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      '1,240 points',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Daily Streak',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: kLightTextColor,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '$streak ${streak == 1 ? 'day' : 'days'}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+                const Divider(height: 1, color: kDividerColor),
+                const SizedBox(height: 16),
+
+                // Points
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Total Points',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: kLightTextColor,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        FutureBuilder<Map<String, dynamic>>(
+                          future: ProfileService(
+                            baseUrl: 'http://10.0.2.2:8080/api/v1',
+                            getHeaders: () async {
+                              final prefs =
+                                  await SharedPreferences.getInstance();
+                              final token = prefs.getString('auth_token');
+                              if (token == null)
+                                throw Exception(
+                                    'No authentication token found');
+                              return {
+                                'Authorization': 'Bearer $token',
+                                'Content-Type': 'application/json',
+                              };
+                            },
+                          ).getUserDashboard(),
+                          builder: (context, snapshot) {
+                            // Default value
+                            int points = 0;
+
+                            // Extract points from dashboard if available
+                            if (snapshot.hasData) {
+                              final dashboardData = snapshot.data!;
+                              if (dashboardData.containsKey('learningStats') &&
+                                  dashboardData['learningStats'] != null) {
+                                // Try to get points or calculate from other stats
+                                points = dashboardData['learningStats']
+                                        ['totalPoints'] ??
+                                    (dashboardData['learningStats']
+                                                    ['completedLessons'] ??
+                                                0) *
+                                            100 +
+                                        (dashboardData['learningStats']
+                                                    ['streak'] ??
+                                                0) *
+                                            50;
+                              }
+                            }
+
+                            return Text(
+                              '$points points',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () {
+                        // View all achievements
+                      },
+                      icon: const Icon(Icons.arrow_forward, size: 16),
+                      label: const Text('View All'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: kAccentColor,
                       ),
                     ),
                   ],
                 ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: () {
-                    // View all achievements
-                  },
-                  icon: const Icon(Icons.arrow_forward, size: 16),
-                  label: const Text('View All'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: kAccentColor,
-                  ),
-                ),
               ],
+            ),
           ),
-        ],
-        ),
-      ),
+        );
+      },
+    );
+  }
+
+  // Add a method to show logout confirmation dialog
+  Future<void> _showLogoutConfirmationDialog(BuildContext context) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Logout',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: kTextColor,
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(
+              color: kLightTextColor,
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: kLightTextColor,
+              ),
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kPrimaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Logout'),
+              onPressed: () async {
+                // Clear user data
+                await UserCacheService.clearCache();
+
+                // Navigate to login page and clear navigation history
+                if (context.mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/login', // Replace with your login route
+                    (route) => false,
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

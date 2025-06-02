@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/course.dart';
 import '../models/lesson.dart';
 import '../services/lesson_service.dart';
-import 'Quiz.dart';
+import '../widgets/lesson_content_widget.dart';
+import 'QuizScreen.dart';
 
 class LessonScreen extends StatefulWidget {
   final Course course;
@@ -24,6 +25,8 @@ class _LessonScreenState extends State<LessonScreen> {
   List<LessonContent>? _currentLessonContent;
   bool _isLoading = false;
   String? _error;
+  // Track if current lesson is already completed
+  bool _currentLessonCompleted = false;
 
   @override
   void initState() {
@@ -37,6 +40,7 @@ class _LessonScreenState extends State<LessonScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _currentLessonCompleted = false;
     });
 
     try {
@@ -55,7 +59,24 @@ class _LessonScreenState extends State<LessonScreen> {
     }
   }
 
-  void _nextLesson() {
+  // Mark the current lesson as completed
+  Future<void> _markLessonCompleted() async {
+    if (_currentLessonCompleted) return;
+
+    try {
+      await _lessonService.markLessonCompleted(
+        widget.lessons[_currentLessonIndex].id,
+      );
+      _currentLessonCompleted = true;
+    } catch (e) {
+      print('Error marking lesson as completed: $e');
+    }
+  }
+
+  void _nextLesson() async {
+    // Mark current lesson as completed when moving to the next
+    await _markLessonCompleted();
+
     if (_currentLessonIndex < widget.lessons.length - 1) {
       setState(() {
         _currentLessonIndex++;
@@ -73,11 +94,14 @@ class _LessonScreenState extends State<LessonScreen> {
     }
   }
 
-  void _startQuiz() {
+  void _startQuiz() async {
+    // Mark lesson as completed before starting the quiz
+    await _markLessonCompleted();
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => QuizStartScreen(
+        builder: (context) => QuizScreen(
           lessonId: widget.lessons[_currentLessonIndex].id,
         ),
       ),
@@ -95,7 +119,8 @@ class _LessonScreenState extends State<LessonScreen> {
         foregroundColor: Colors.white,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF8B4513)))
           : _error != null
               ? Center(
                   child: Column(
@@ -105,97 +130,105 @@ class _LessonScreenState extends State<LessonScreen> {
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadCurrentLessonContent,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF8B4513),
+                          foregroundColor: Colors.white,
+                        ),
                         child: const Text('Retry'),
                       ),
                     ],
                   ),
                 )
-              : SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Lesson content
-                      if (_currentLessonContent != null)
-                        ..._currentLessonContent!.map((content) {
-                          switch (content.contentType) {
-                            case 'TEXT':
-                              return Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Text(
-                                  content.contentData,
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              );
-                            case 'AUDIO':
-                              return Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  children: [
-                                    Text(content.contentData),
-                                    if (content.mediaUrl != null)
-                                      ElevatedButton.icon(
-                                        onPressed: () {
-                                          // TODO: Implement audio playback
-                                        },
-                                        icon: const Icon(Icons.play_arrow),
-                                        label: const Text('Play Audio'),
-                                      ),
-                                  ],
-                                ),
-                              );
-                            case 'IMAGE':
-                              return Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  children: [
-                                    Text(content.contentData),
-                                    if (content.mediaUrl != null)
-                                      Image.network(
-                                        content.mediaUrl!,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return const Icon(Icons.error);
-                                        },
-                                      ),
-                                  ],
-                                ),
-                              );
-                            default:
-                              return const SizedBox.shrink();
-                          }
-                        }).toList(),
-
-                      // Navigation buttons
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            ElevatedButton(
-                              onPressed: _currentLessonIndex > 0
-                                  ? _previousLesson
-                                  : null,
-                              child: const Text('Previous'),
-                            ),
-                            ElevatedButton(
-                              onPressed: _startQuiz,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF8B4513),
-                                foregroundColor: Colors.white,
-                              ),
-                              child: const Text('Take Quiz'),
-                            ),
-                            ElevatedButton(
-                              onPressed: _currentLessonIndex < widget.lessons.length - 1
-                                  ? _nextLesson
-                                  : null,
-                              child: const Text('Next'),
-                            ),
-                          ],
-                        ),
+              : Column(
+                  children: [
+                    // Lesson content - using the LessonContentWidget
+                    Expanded(
+                      child: LessonContentWidget(
+                        lesson: currentLesson,
+                        onContentCompleted: () {
+                          // This callback gets triggered when user has viewed all content
+                          _markLessonCompleted();
+                        },
                       ),
-                    ],
-                  ),
+                    ),
+
+                    // Navigation buttons
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, -4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          ElevatedButton(
+                            onPressed: _currentLessonIndex > 0
+                                ? _previousLesson
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF8B4513),
+                              disabledForegroundColor:
+                                  Colors.grey.withOpacity(0.5),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(
+                                  color: _currentLessonIndex > 0
+                                      ? const Color(0xFF8B4513)
+                                      : Colors.grey.withOpacity(0.5),
+                                ),
+                              ),
+                            ),
+                            child: const Text('Previous'),
+                          ),
+                          ElevatedButton(
+                            onPressed: _startQuiz,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF8B4513),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text('Take Quiz'),
+                          ),
+                          ElevatedButton(
+                            onPressed:
+                                _currentLessonIndex < widget.lessons.length - 1
+                                    ? _nextLesson
+                                    : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF8B4513),
+                              disabledForegroundColor:
+                                  Colors.grey.withOpacity(0.5),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(
+                                  color: _currentLessonIndex <
+                                          widget.lessons.length - 1
+                                      ? const Color(0xFF8B4513)
+                                      : Colors.grey.withOpacity(0.5),
+                                ),
+                              ),
+                            ),
+                            child: const Text('Next'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
     );
   }
-} 
+}

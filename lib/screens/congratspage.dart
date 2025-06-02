@@ -1,7 +1,7 @@
 import 'package:afrilingo/screens/auth/user_dashboard.dart';
 import 'package:flutter/material.dart';
-
-import 'Quiz.dart';
+import '../models/quiz.dart';
+import 'QuizScreen.dart';
 
 class CongratulationsScreen extends StatefulWidget {
   final int lessonId;
@@ -112,7 +112,7 @@ class _CongratulationsScreenState extends State<CongratulationsScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => QuizStartScreen(
+                          builder: (context) => QuizScreen(
                             lessonId: widget.lessonId,
                           ),
                         ),

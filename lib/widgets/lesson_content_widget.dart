@@ -2,25 +2,61 @@ import 'package:flutter/material.dart';
 import 'package:afrilingo/models/lesson.dart';
 import 'package:afrilingo/services/audio_service.dart';
 import 'package:afrilingo/widgets/audio_player_widget.dart';
+import 'package:flutter/services.dart';
+import 'package:percent_indicator/linear_percent_indicator.dart';
+
+// African-inspired color palette
+const Color kPrimaryColor = Color(0xFF8B4513); // Brown
+const Color kSecondaryColor = Color(0xFFC78539); // Light brown
+const Color kAccentColor = Color(0xFF546CC3); // Blue accent
+const Color kBackgroundColor = Color(0xFFF9F5F1); // Cream background
+const Color kTextColor = Color(0xFF333333); // Dark text
+const Color kLightTextColor = Color(0xFF777777); // Light text
+const Color kCardColor = Color(0xFFFFFFFF); // White card background
+const Color kDividerColor = Color(0xFFEEEEEE); // Light divider
 
 class LessonContentWidget extends StatefulWidget {
   final Lesson lesson;
+  final VoidCallback? onContentCompleted;
 
-  const LessonContentWidget({Key? key, required this.lesson}) : super(key: key);
+  const LessonContentWidget({
+    Key? key,
+    required this.lesson,
+    this.onContentCompleted,
+  }) : super(key: key);
 
   @override
   State<LessonContentWidget> createState() => _LessonContentWidgetState();
 }
 
-class _LessonContentWidgetState extends State<LessonContentWidget> {
+class _LessonContentWidgetState extends State<LessonContentWidget>
+    with SingleTickerProviderStateMixin {
   int currentStepIndex = 0;
   final PageController _pageController = PageController();
   List<LearningStep> learningSteps = [];
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  bool _hasReachedEnd = false;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
     _parseLearningSteps();
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _animationController.dispose();
+    super.dispose();
   }
 
   void _parseLearningSteps() {
@@ -30,45 +66,90 @@ class _LessonContentWidgetState extends State<LessonContentWidget> {
         if (content.contentType == 'TEXT' && content.contentData != null) {
           final lines = content.contentData.split('\n');
           String? currentSection;
+          List<String> currentSectionBullets = [];
+
           for (var line in lines) {
-            // Remove markdown symbols
             final trimmed = line.trim();
             if (trimmed.isEmpty) continue;
-            // Section headers
+
+            // Section headers (# or ##)
             final headerMatch = RegExp(r'^(#+)\s*(.*)').firstMatch(trimmed);
             if (headerMatch != null) {
-              currentSection = headerMatch.group(2)!.replaceAll(RegExp(r'[\*`_]'), '').trim();
-              learningSteps.add(LearningStep(
-                type: StepType.section,
-                content: currentSection,
-                mediaUrl: null,
-              ));
-              continue;
-            }
-            // Bullet points or phrases
-            if (trimmed.startsWith('*')) {
-              // Remove all markdown and asterisks
-              final cleanLine = trimmed.replaceAll(RegExp(r'\*'), '').replaceAll(RegExp(r'[\*`_]'), '').trim();
-              if (cleanLine.isNotEmpty) {
+              // If we have accumulated bullets for a previous section, add them first
+              if (currentSection != null && currentSectionBullets.isNotEmpty) {
                 learningSteps.add(LearningStep(
-                  type: StepType.phrase,
-                  content: cleanLine,
-                  mediaUrl: null,
+                  type: StepType.bulletList,
+                  content: currentSectionBullets.join('\n'),
                   section: currentSection,
+                ));
+                currentSectionBullets = [];
+              }
+
+              // Add the new section header
+              final headerLevel = headerMatch.group(1)!.length;
+              currentSection = headerMatch
+                  .group(2)!
+                  .replaceAll(RegExp(r'[\*`_]'), '')
+                  .trim();
+
+              // Only add level 1 and 2 headers as separate cards
+              if (headerLevel <= 2) {
+                learningSteps.add(LearningStep(
+                  type: headerLevel == 1
+                      ? StepType.mainHeader
+                      : StepType.subHeader,
+                  content: currentSection,
                 ));
               }
               continue;
             }
-            // Fallback: treat as plain text
+
+            // Bullet points
+            if (trimmed.startsWith('*')) {
+              // Extract the bullet content, handling "term - definition" format
+              final bulletContent = trimmed.replaceFirst('*', '').trim();
+              final cleanBullet =
+                  bulletContent.replaceAll(RegExp(r'[\*`_]'), '').trim();
+
+              if (cleanBullet.isNotEmpty) {
+                // Check if this is a phrase with translation
+                if (cleanBullet.contains(' - ')) {
+                  final parts = cleanBullet.split(' - ');
+                  final phrase = parts[0].trim();
+                  final translation = parts.length > 1 ? parts[1].trim() : '';
+
+                  learningSteps.add(LearningStep(
+                    type: StepType.phrase,
+                    content: phrase,
+                    translation: translation,
+                    section: currentSection,
+                  ));
+                } else {
+                  // Collect bullets for the current section
+                  currentSectionBullets.add(cleanBullet);
+                }
+              }
+              continue;
+            }
+
+            // Regular text paragraph
             final cleanText = trimmed.replaceAll(RegExp(r'[\*`_]'), '').trim();
             if (cleanText.isNotEmpty) {
               learningSteps.add(LearningStep(
-                type: StepType.phrase,
+                type: StepType.paragraph,
                 content: cleanText,
-                mediaUrl: null,
                 section: currentSection,
               ));
             }
+          }
+
+          // Add any remaining bullet points
+          if (currentSectionBullets.isNotEmpty) {
+            learningSteps.add(LearningStep(
+              type: StepType.bulletList,
+              content: currentSectionBullets.join('\n'),
+              section: currentSection,
+            ));
           }
         } else if (content.contentType == 'AUDIO' && content.mediaUrl != null) {
           learningSteps.add(LearningStep(
@@ -76,102 +157,273 @@ class _LessonContentWidgetState extends State<LessonContentWidget> {
             content: 'Listen to the pronunciation',
             mediaUrl: content.mediaUrl,
           ));
+        } else if (content.contentType == 'IMAGE' && content.mediaUrl != null) {
+          learningSteps.add(LearningStep(
+            type: StepType.image,
+            content: 'Visual example',
+            mediaUrl: content.mediaUrl,
+            section: 'Visual Aid',
+          ));
         }
       }
-    }
-    print('DEBUG: Parsed learning steps:');
-    for (var step in learningSteps) {
-      print('  - ${step.type} | ${step.section ?? ''} | ${step.content}');
     }
   }
 
   void _nextStep() {
     if (currentStepIndex < learningSteps.length - 1) {
+      _animationController.reset();
       setState(() {
         currentStepIndex++;
       });
       _pageController.animateToPage(
         currentStepIndex,
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
       );
+      _animationController.forward();
+      HapticFeedback.lightImpact();
+
+      // Check if this is the last step
+      if (currentStepIndex == learningSteps.length - 1 && !_hasReachedEnd) {
+        setState(() {
+          _hasReachedEnd = true;
+        });
+        // Call the callback if provided
+        if (widget.onContentCompleted != null) {
+          widget.onContentCompleted!();
+        }
+      }
     }
   }
 
   void _previousStep() {
     if (currentStepIndex > 0) {
+      _animationController.reset();
       setState(() {
         currentStepIndex--;
       });
       _pageController.animateToPage(
         currentStepIndex,
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
       );
+      _animationController.forward();
+      HapticFeedback.lightImpact();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (learningSteps.isEmpty) {
-      return const Center(child: Text('No learning content available.'));
-    }
-    return Column(
-      children: [
-        Expanded(
-          child: PageView.builder(
-            controller: _pageController,
-            itemCount: learningSteps.length,
-            onPageChanged: (index) {
-              setState(() {
-                currentStepIndex = index;
-              });
-            },
-            itemBuilder: (context, index) {
-              final step = learningSteps[index];
-              return _buildStepCard(step);
-            },
-          ),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.info_outline, size: 64, color: kLightTextColor),
+            const SizedBox(height: 16),
+            Text(
+              'No learning content available.',
+              style: TextStyle(
+                fontSize: 18,
+                color: kLightTextColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
-        _buildNavigationControls(),
-      ],
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: kBackgroundColor,
+      body: Column(
+        children: [
+          _buildProgressBar(),
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              physics: const BouncingScrollPhysics(),
+              itemCount: learningSteps.length,
+              onPageChanged: (index) {
+                setState(() {
+                  currentStepIndex = index;
+                });
+                _animationController.reset();
+                _animationController.forward();
+              },
+              itemBuilder: (context, index) {
+                final step = learningSteps[index];
+                return FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: _buildStepCard(step),
+                );
+              },
+            ),
+          ),
+          _buildNavigationControls(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Lesson Progress',
+                style: TextStyle(
+                  color: kTextColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                '${((currentStepIndex + 1) / learningSteps.length * 100).toInt()}%',
+                style: TextStyle(
+                  color: kPrimaryColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          LinearPercentIndicator(
+            lineHeight: 8.0,
+            percent: (currentStepIndex + 1) / learningSteps.length,
+            backgroundColor: kDividerColor,
+            progressColor: kPrimaryColor,
+            barRadius: const Radius.circular(8),
+            padding: EdgeInsets.zero,
+            animation: true,
+            animationDuration: 300,
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildStepCard(LearningStep step) {
     switch (step.type) {
-      case StepType.section:
-        return _buildSectionCard(step);
+      case StepType.mainHeader:
+        return _buildMainHeaderCard(step);
+      case StepType.subHeader:
+        return _buildSubHeaderCard(step);
       case StepType.phrase:
         return _buildPhraseCard(step);
+      case StepType.bulletList:
+        return _buildBulletListCard(step);
+      case StepType.paragraph:
+        return _buildParagraphCard(step);
       case StepType.audio:
         return _buildAudioCard(step);
+      case StepType.image:
+        return _buildImageCard(step);
     }
   }
 
-  Widget _buildSectionCard(LearningStep step) {
+  Widget _buildMainHeaderCard(LearningStep step) {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.blue.shade700, Colors.blue.shade900],
+            colors: [kPrimaryColor, kSecondaryColor],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(
-              Icons.school,
-              size: 48,
+              Icons.menu_book_rounded,
+              size: 64,
               color: Colors.white,
             ),
+            const SizedBox(height: 24),
+            Text(
+              step.content,
+              style: const TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                widget.lesson.title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withOpacity(0.9),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubHeaderCard(LearningStep step) {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [kAccentColor.withOpacity(0.8), kAccentColor],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              _getIconForSection(step.content),
+              size: 56,
+              color: Colors.white,
+            ),
+            const SizedBox(height: 20),
             Text(
               step.content,
               style: const TextStyle(
@@ -188,60 +440,236 @@ class _LessonContentWidgetState extends State<LessonContentWidget> {
   }
 
   Widget _buildPhraseCard(LearningStep step) {
-    // Try to split phrase and translation by ' - '
-    final parts = step.content.split(' - ');
-    final phrase = parts[0].trim();
-    final translation = parts.length > 1 ? parts[1].trim() : '';
-
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.blue.shade200),
+          color: kCardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kSecondaryColor.withOpacity(0.3), width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (step.section != null) ...[
-              Text(
-                step.section!,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.blue.shade700,
-                  fontWeight: FontWeight.w500,
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: kSecondaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  step.section!,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: kSecondaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
             ],
-            Text(
-              phrase,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: kPrimaryColor.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
               ),
-              textAlign: TextAlign.center,
+              child: Text(
+                step.content,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: kPrimaryColor,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
-            if (translation.isNotEmpty) ...[
-              const SizedBox(height: 12),
+            if (step.translation != null && step.translation!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    height: 1.5,
+                    width: 40,
+                    color: kDividerColor,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(
+                      Icons.translate,
+                      size: 20,
+                      color: kLightTextColor,
+                    ),
+                  ),
+                  Container(
+                    height: 1.5,
+                    width: 40,
+                    color: kDividerColor,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               Text(
-                translation,
+                step.translation!,
                 style: TextStyle(
                   fontSize: 18,
-                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                  color: kTextColor,
+                  fontStyle: FontStyle.italic,
                 ),
                 textAlign: TextAlign.center,
               ),
             ],
             const SizedBox(height: 20),
-            Icon(
-              Icons.arrow_forward,
-              color: Colors.blue.shade400,
-              size: 32,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Tap to hear icon
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: kAccentColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.volume_up,
+                    color: kAccentColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Tap to hear pronunciation',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: kLightTextColor,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBulletListCard(LearningStep step) {
+    final bullets = step.content.split('\n');
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: kCardColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (step.section != null) ...[
+              Text(
+                step.section!,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: kPrimaryColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                height: 2,
+                width: 80,
+                decoration: BoxDecoration(
+                  color: kPrimaryColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+            ...bullets.map((bullet) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      height: 8,
+                      width: 8,
+                      decoration: BoxDecoration(
+                        color: kSecondaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        bullet,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: kTextColor,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildParagraphCard(LearningStep step) {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: kCardColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (step.section != null) ...[
+              Text(
+                step.section!,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: kPrimaryColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            Text(
+              step.content,
+              style: TextStyle(
+                fontSize: 16,
+                color: kTextColor,
+                height: 1.6,
+              ),
             ),
           ],
         ),
@@ -253,27 +681,46 @@ class _LessonContentWidgetState extends State<LessonContentWidget> {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.blue.shade200),
+          color: kCardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kAccentColor.withOpacity(0.3), width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.headphones,
-              size: 48,
-              color: Colors.blue,
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: kAccentColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.headphones,
+                size: 56,
+                color: kAccentColor,
+              ),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Listen to the pronunciation',
+            const SizedBox(height: 24),
+            Text(
+              'Listen to the Pronunciation',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
+                color: kTextColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tap play and repeat after the audio',
+              style: TextStyle(
+                fontSize: 14,
+                color: kLightTextColor,
               ),
             ),
             const SizedBox(height: 24),
@@ -284,55 +731,196 @@ class _LessonContentWidgetState extends State<LessonContentWidget> {
     );
   }
 
+  Widget _buildImageCard(LearningStep step) {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: kCardColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (step.section != null) ...[
+              Text(
+                step.section!,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: kPrimaryColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                step.mediaUrl!,
+                height: 200,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 200,
+                    color: kDividerColor,
+                    child: Center(
+                      child: Icon(
+                        Icons.image_not_supported,
+                        color: kLightTextColor,
+                        size: 40,
+                      ),
+                    ),
+                  );
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    height: 200,
+                    color: kDividerColor,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                (loadingProgress.expectedTotalBytes ?? 1)
+                            : null,
+                        color: kPrimaryColor,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              step.content,
+              style: TextStyle(
+                fontSize: 16,
+                color: kTextColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildNavigationControls() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          TextButton.icon(
+          // Previous button
+          ElevatedButton.icon(
             onPressed: currentStepIndex > 0 ? _previousStep : null,
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back_rounded, size: 20),
             label: const Text('Previous'),
-            style: TextButton.styleFrom(
-              foregroundColor: currentStepIndex > 0 ? Colors.blue : Colors.grey,
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  currentStepIndex > 0 ? kCardColor : Colors.grey.shade200,
+              foregroundColor:
+                  currentStepIndex > 0 ? kPrimaryColor : Colors.grey,
+              elevation: currentStepIndex > 0 ? 2 : 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: currentStepIndex > 0
+                      ? kPrimaryColor.withOpacity(0.5)
+                      : Colors.transparent,
+                ),
+              ),
             ),
           ),
-          Text(
-            '${currentStepIndex + 1} / ${learningSteps.length}',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+
+          // Page indicator
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: kPrimaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '${currentStepIndex + 1} / ${learningSteps.length}',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: kPrimaryColor,
+              ),
             ),
           ),
-          TextButton.icon(
-            onPressed: currentStepIndex < learningSteps.length - 1 ? _nextStep : null,
-            icon: const Icon(Icons.arrow_forward),
+
+          // Next button
+          ElevatedButton.icon(
+            onPressed:
+                currentStepIndex < learningSteps.length - 1 ? _nextStep : null,
             label: const Text('Next'),
-            style: TextButton.styleFrom(
-              foregroundColor: currentStepIndex < learningSteps.length - 1 ? Colors.blue : Colors.grey,
+            icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: currentStepIndex < learningSteps.length - 1
+                  ? kPrimaryColor
+                  : Colors.grey.shade200,
+              foregroundColor: currentStepIndex < learningSteps.length - 1
+                  ? Colors.white
+                  : Colors.grey,
+              elevation: currentStepIndex < learningSteps.length - 1 ? 2 : 0,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           ),
         ],
       ),
     );
   }
+
+  IconData _getIconForSection(String section) {
+    // Determine appropriate icon based on section title
+    if (section.contains('Greetings')) return Icons.waving_hand;
+    if (section.contains('Numbers')) return Icons.pin;
+    if (section.contains('Family')) return Icons.family_restroom;
+    if (section.contains('Days')) return Icons.calendar_today;
+    if (section.contains('Phrases')) return Icons.chat_bubble;
+    if (section.contains('Colors')) return Icons.palette;
+    if (section.contains('Food')) return Icons.restaurant;
+    if (section.contains('Weather')) return Icons.cloud;
+    if (section.contains('Verbs')) return Icons.directions_run;
+    if (section.contains('Introduction')) return Icons.emoji_people;
+    if (section.contains('Cultural')) return Icons.public;
+    if (section.contains('Grammar')) return Icons.menu_book;
+    if (section.contains('Questions')) return Icons.help;
+    if (section.contains('Practice')) return Icons.fitness_center;
+
+    // Default icon
+    return Icons.menu_book;
+  }
 }
 
 enum StepType {
-  section,
-  phrase,
-  audio,
+  mainHeader, // Main lesson header (# Title)
+  subHeader, // Section header (## Subtitle)
+  phrase, // Language phrase with translation
+  bulletList, // A list of bullet points
+  paragraph, // Regular text paragraph
+  audio, // Audio content
+  image, // Image content
 }
 
 class LearningStep {
@@ -340,11 +928,13 @@ class LearningStep {
   final String content;
   final String? mediaUrl;
   final String? section;
+  final String? translation;
 
   LearningStep({
     required this.type,
     required this.content,
     this.mediaUrl,
     this.section,
+    this.translation,
   });
-} 
+}

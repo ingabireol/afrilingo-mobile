@@ -11,6 +11,78 @@ class ProfileService {
 
   ProfileService({required this.baseUrl, required this.getHeaders});
 
+  // Add a method to fetch and set user identity
+  Future<UserIdentity?> fetchAndSetUserIdentity() async {
+    try {
+      print("Fetching and setting user identity...");
+      final headers = await getHeaders();
+
+      // Try the profile/name endpoint first as it's lightweight
+      try {
+        final nameResponse = await http
+            .get(Uri.parse('$baseUrl/profile/name'), headers: headers)
+            .timeout(_timeout);
+
+        if (nameResponse.statusCode == 200) {
+          final data = json.decode(nameResponse.body);
+          final nameData = data['data'] as Map<String, dynamic>;
+
+          final userIdentity = UserIdentity(
+              id: await UserCacheService.getCachedUserId(),
+              firstName: nameData['firstName'] ?? '',
+              lastName: nameData['lastName'] ?? '',
+              email: nameData['email'] ?? '',
+              profilePicture: await UserCacheService.getCachedProfilePicture(),
+              streak: await getUserStreak());
+
+          // Cache the identity
+          await UserCacheService.cacheUserIdentity(userIdentity);
+          print(
+              "Set user identity from name endpoint: ${userIdentity.firstName}");
+
+          return userIdentity;
+        }
+      } catch (e) {
+        print("Error fetching user name: $e");
+      }
+
+      // Try the auth/me endpoint if name endpoint fails
+      try {
+        final userResponse = await http
+            .get(Uri.parse('$baseUrl/auth/me'), headers: headers)
+            .timeout(_timeout);
+
+        if (userResponse.statusCode == 200) {
+          final userData = json.decode(userResponse.body);
+          final user = userData['data'] ?? userData;
+
+          final userIdentity = UserIdentity(
+              id: user['id'] ?? 0,
+              firstName: user['firstName'] ?? '',
+              lastName: user['lastName'] ?? '',
+              email: user['email'] ?? '',
+              profilePicture: await UserCacheService.getCachedProfilePicture(),
+              streak: await getUserStreak());
+
+          // Cache the identity
+          await UserCacheService.cacheUserIdentity(userIdentity);
+          print(
+              "Set user identity from auth endpoint: ${userIdentity.firstName}");
+
+          return userIdentity;
+        }
+      } catch (e) {
+        print("Error fetching user data: $e");
+      }
+
+      // If we get here, try to use existing cached identity
+      return await UserCacheService.getCurrentUserIdentity();
+    } catch (e) {
+      print("Error in fetchAndSetUserIdentity: $e");
+      return null;
+    }
+  }
+
   Future<UserProfile> getCurrentUserProfile() async {
     // Try to get from cache first
     final isCacheValid = await UserCacheService.isCacheValid();
@@ -21,10 +93,13 @@ class ProfileService {
       }
     }
 
+    // First fetch and set user identity to ensure consistent data
+    await fetchAndSetUserIdentity();
+
     // If no valid cache, fetch from network
     try {
       final headers = await getHeaders();
-      
+
       // First try to use the dashboard endpoint which includes all user data
       try {
         print("Trying to fetch from dashboard endpoint...");
@@ -32,45 +107,52 @@ class ProfileService {
             .get(Uri.parse('$baseUrl/dashboard'), headers: headers)
             .timeout(
               _timeout,
-              onTimeout: () => throw Exception('Dashboard connection timed out'),
+              onTimeout: () =>
+                  throw Exception('Dashboard connection timed out'),
             );
-            
+
         if (dashboardResponse.statusCode == 200) {
           final data = json.decode(dashboardResponse.body);
           final dashboardData = data['data'] ?? data;
-          
+
           // Extract user profile from dashboard data
           if (dashboardData['userProfile'] != null) {
             final userProfileData = dashboardData['userProfile'];
-            
+
             // The dashboard data includes both User and UserProfile
             // But we need to extract the user's first name and last name from the User entity
             final userData = userProfileData['user'];
-            
+
             if (userData != null) {
               // Build a complete profile with user data merged in
               final completeProfileData = <String, dynamic>{...userProfileData};
-              
+
               // Add the user data (firstName, lastName, email) directly to the profile
               completeProfileData['firstName'] = userData['firstName'];
               completeProfileData['lastName'] = userData['lastName'];
               completeProfileData['email'] = userData['email'];
-              
-              print("User data found in dashboard response: firstName=${userData['firstName']}, lastName=${userData['lastName']}");
-              
+
+              print(
+                  "User data found in dashboard response: firstName=${userData['firstName']}, lastName=${userData['lastName']}");
+
               final profile = UserProfile.fromJson(completeProfileData);
-              
+
               // Cache the profile for future use
               await UserCacheService.cacheUserProfile(profile);
-              
-              // Also cache individual fields for quick access
-              if (userData['firstName'] != null) {
-                await UserCacheService.cacheFirstName(userData['firstName']);
-              }
-              if (userData['email'] != null) {
-                await UserCacheService.cacheEmail(userData['email']);
-              }
-              
+
+              // Also create a UserIdentity object for consistent data
+              final userIdentity = UserIdentity(
+                  id: userData['id'] is int
+                      ? userData['id']
+                      : int.tryParse(userData['id'].toString()) ?? 0,
+                  firstName: userData['firstName'] ?? '',
+                  lastName: userData['lastName'] ?? '',
+                  email: userData['email'] ?? '',
+                  profilePicture: userProfileData['profilePicture'],
+                  streak: await getUserStreak());
+
+              await UserCacheService.cacheUserIdentity(userIdentity);
+
               return profile;
             }
           }
@@ -78,7 +160,7 @@ class ProfileService {
       } catch (e) {
         print("Error fetching from dashboard endpoint: $e");
       }
-      
+
       // Try the regular profile endpoint as fallback
       try {
         print("Trying to fetch from profile endpoint...");
@@ -88,49 +170,67 @@ class ProfileService {
               _timeout,
               onTimeout: () => throw Exception('Profile connection timed out'),
             );
-            
+
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           final responseData = data['data'] ?? data;
-          
+
           // Try to extract user data from the profile response
           final profileData = <String, dynamic>{...responseData};
-          
+
           // If the response contains user info, extract it
           if (responseData['user'] != null) {
             final userData = responseData['user'];
             // Prioritize user entity data for these fields
-            if (userData['firstName'] != null) profileData['firstName'] = userData['firstName'];
-            if (userData['lastName'] != null) profileData['lastName'] = userData['lastName'];
-            if (userData['email'] != null) profileData['email'] = userData['email'];
-            
-            print("User data found in profile response: firstName=${userData['firstName']}, lastName=${userData['lastName']}");
+            if (userData['firstName'] != null)
+              profileData['firstName'] = userData['firstName'];
+            if (userData['lastName'] != null)
+              profileData['lastName'] = userData['lastName'];
+            if (userData['email'] != null)
+              profileData['email'] = userData['email'];
+
+            print(
+                "User data found in profile response: firstName=${userData['firstName']}, lastName=${userData['lastName']}");
+
+            // Create a UserIdentity for consistent data
+            final userIdentity = UserIdentity(
+                id: userData['id'] is int
+                    ? userData['id']
+                    : int.tryParse(userData['id'].toString()) ?? 0,
+                firstName: userData['firstName'] ?? '',
+                lastName: userData['lastName'] ?? '',
+                email: userData['email'] ?? '',
+                profilePicture: profileData['profilePicture'],
+                streak: await getUserStreak());
+
+            await UserCacheService.cacheUserIdentity(userIdentity);
           }
-          
+
           final profile = UserProfile.fromJson(profileData);
-          
+
           // Cache the profile for future use
           await UserCacheService.cacheUserProfile(profile);
-          
+
           return profile;
         }
       } catch (e) {
         print("Error fetching from profile endpoint: $e");
       }
-      
+
       // Try getting direct user info as a last resort
       try {
         print("Trying to fetch direct user info...");
         final userResponse = await http
             .get(Uri.parse('$baseUrl/auth/me'), headers: headers)
             .timeout(_timeout);
-            
+
         if (userResponse.statusCode == 200) {
           final userData = json.decode(userResponse.body);
           final user = userData['data'] ?? userData;
-          
-          print("User data found from auth endpoint: firstName=${user['firstName']}, lastName=${user['lastName']}");
-          
+
+          print(
+              "User data found from auth endpoint: firstName=${user['firstName']}, lastName=${user['lastName']}");
+
           // Create a minimal profile from user data
           final profile = UserProfile(
             id: user['id'] ?? 0,
@@ -143,45 +243,49 @@ class ProfileService {
             profilePicture: null,
             languagesToLearn: [],
           );
-          
+
           // Cache this minimal profile
           await UserCacheService.cacheUserProfile(profile);
-          
-          // Also cache individual fields for quick access
-          if (user['firstName'] != null) {
-            await UserCacheService.cacheFirstName(user['firstName']);
-          }
-          if (user['email'] != null) {
-            await UserCacheService.cacheEmail(user['email']);
-          }
-          
+
+          // Also create a UserIdentity for consistent data
+          final userIdentity = UserIdentity(
+              id: user['id'] is int
+                  ? user['id']
+                  : int.tryParse(user['id'].toString()) ?? 0,
+              firstName: user['firstName'] ?? '',
+              lastName: user['lastName'] ?? '',
+              email: user['email'] ?? '',
+              profilePicture: null,
+              streak: await getUserStreak());
+
+          await UserCacheService.cacheUserIdentity(userIdentity);
+
           return profile;
         }
       } catch (e) {
         print("Error fetching from auth endpoint: $e");
       }
-      
+
       // If all server requests fail but we have a cached profile, return it
       final cachedProfile = await UserCacheService.getCachedUserProfile();
       if (cachedProfile != null) {
         print("Using cached profile as fallback");
         return cachedProfile;
       }
-      
+
       // Create a mock profile for development purposes
       print("Using mock profile as last resort");
       return _createMockProfile();
-      
     } catch (e) {
       print("Error in getCurrentUserProfile: $e");
-      
+
       // On error, try to use cached data as fallback
       final cachedProfile = await UserCacheService.getCachedUserProfile();
       if (cachedProfile != null) {
         print("Using cached profile after error");
         return cachedProfile;
       }
-      
+
       // Create a mock profile for development purposes
       print("Using mock profile after error");
       return _createMockProfile();
@@ -196,7 +300,7 @@ class ProfileService {
           _timeout,
           onTimeout: () => throw Exception('Connection timed out'),
         );
-        
+
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return data['data'] == true;
@@ -205,14 +309,17 @@ class ProfileService {
     }
   }
 
-  Future<Map<String, dynamic>> createOrUpdateUserProfile(Map<String, dynamic> profileData) async {
+  Future<Map<String, dynamic>> createOrUpdateUserProfile(
+      Map<String, dynamic> profileData) async {
     try {
       final headers = await getHeaders();
-      final response = await http.post(
-        Uri.parse('$baseUrl/profile'),
-        headers: headers,
-        body: json.encode(profileData),
-      ).timeout(_timeout);
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/profile'),
+            headers: headers,
+            body: json.encode(profileData),
+          )
+          .timeout(_timeout);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
@@ -235,7 +342,8 @@ class ProfileService {
       final data = json.decode(response.body);
       return UserProfile.fromJson(data['data'] ?? data);
     } else {
-      throw Exception('Failed to update languages to learn: ${response.statusCode}');
+      throw Exception(
+          'Failed to update languages to learn: ${response.statusCode}');
     }
   }
 
@@ -252,27 +360,32 @@ class ProfileService {
     if (preferredLearningTime != null) {
       params['preferredLearningTime'] = preferredLearningTime;
     }
-    final uri = Uri.parse('$baseUrl/profile/preferences').replace(queryParameters: params);
+    final uri = Uri.parse('$baseUrl/profile/preferences')
+        .replace(queryParameters: params);
     final response = await http.put(uri, headers: headers);
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return UserProfile.fromJson(data['data'] ?? data);
     } else {
-      throw Exception('Failed to update learning preferences: ${response.statusCode}');
+      throw Exception(
+          'Failed to update learning preferences: ${response.statusCode}');
     }
   }
 
   Future<void> updateProfilePicture(String imageUrl) async {
     try {
       final headers = await getHeaders();
-      final response = await http.post(
-        Uri.parse('$baseUrl/profile/picture'),
-        headers: headers,
-        body: json.encode({'profilePicture': imageUrl}),
-      ).timeout(_timeout);
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/profile/picture'),
+            headers: headers,
+            body: json.encode({'profilePicture': imageUrl}),
+          )
+          .timeout(_timeout);
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception('Failed to update profile picture: ${response.statusCode}');
+        throw Exception(
+            'Failed to update profile picture: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error updating profile picture: $e');
@@ -285,22 +398,125 @@ class ProfileService {
       final response = await http
           .get(Uri.parse('$baseUrl/dashboard'), headers: headers)
           .timeout(_timeout);
-          
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return data['data'] ?? data;
+        final dashboardData = data['data'] ?? data;
+
+        print("Dashboard data received: ${dashboardData.keys}");
+
+        // Make sure we extract user profile data if it exists
+        if (dashboardData.containsKey('userProfile') &&
+            dashboardData['userProfile'] != null) {
+          final userProfile = dashboardData['userProfile'];
+
+          // If the profile includes user data, cache it for faster access
+          if (userProfile.containsKey('user') && userProfile['user'] != null) {
+            final userData = userProfile['user'];
+
+            // Cache key user information
+            if (userData['firstName'] != null &&
+                userData['firstName'].toString().isNotEmpty) {
+              await UserCacheService.cacheFirstName(userData['firstName']);
+            }
+
+            if (userData['email'] != null &&
+                userData['email'].toString().isNotEmpty) {
+              await UserCacheService.cacheEmail(userData['email']);
+            }
+
+            if (userProfile['profilePicture'] != null &&
+                userProfile['profilePicture'].toString().isNotEmpty) {
+              await UserCacheService.cacheProfilePicture(
+                  userProfile['profilePicture']);
+            }
+
+            // Also cache the full profile
+            try {
+              final profile = UserProfile(
+                id: userProfile['id'] ?? 0,
+                firstName: userData['firstName'],
+                lastName: userData['lastName'],
+                email: userData['email'],
+                country: userProfile['country'],
+                firstLanguage: userProfile['firstLanguage'],
+                profilePicture: userProfile['profilePicture'],
+                reasonToLearn: userProfile['reasonToLearn'],
+                dailyReminders: userProfile['dailyReminders'] == true,
+                dailyGoalMinutes: userProfile['dailyGoalMinutes'] ?? 0,
+                preferredLearningTime: userProfile['preferredLearningTime'],
+                languagesToLearn: [], // We don't cache languages in this quick operation
+              );
+
+              await UserCacheService.cacheUserProfile(profile);
+            } catch (cacheError) {
+              print("Error caching profile: $cacheError");
+            }
+          }
+        }
+
+        return dashboardData;
       } else {
-        print("Dashboard endpoint returned status code: ${response.statusCode}");
+        print(
+            "Dashboard endpoint returned status code: ${response.statusCode}");
         print("Response body: ${response.body}");
-        
-        // Return empty data structure instead of throwing
+
+        // Return fallback data structure instead of throwing
+        return await _getFallbackDashboardData();
+      }
+    } catch (e) {
+      print("Error fetching dashboard data: $e");
+
+      // Return fallback data structure instead of throwing
+      return await _getFallbackDashboardData();
+    }
+  }
+
+  // Create a more robust fallback method for dashboard data
+  Future<Map<String, dynamic>> _getFallbackDashboardData() async {
+    // Get cached streak and completed lessons count
+    final streak = await UserCacheService.getCachedStreak();
+
+    // Get completed lessons count
+    int completedLessons = 0;
+    double courseProgress = 0.0;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      completedLessons = prefs.getInt('completed_lessons_count') ?? 0;
+
+      // Calculate course progress based on completed lessons
+      courseProgress = completedLessons > 0
+          ? (completedLessons / 10.0 * 100).clamp(0.0, 100.0)
+          : 30.0;
+    } catch (e) {
+      print("Error getting completed lessons count: $e");
+    }
+
+    // First try to get user profile from the /profile/name endpoint
+    try {
+      final nameData = await getUserName();
+      if (nameData['firstName']!.isNotEmpty) {
+        final userProfile = {
+          'id': 1,
+          'firstName': nameData['firstName'],
+          'lastName': nameData['lastName'] ?? '',
+          'email': nameData['email'] ?? '',
+          'user': {
+            'firstName': nameData['firstName'],
+            'lastName': nameData['lastName'] ?? '',
+            'email': nameData['email'] ?? ''
+          },
+          'profilePicture': await UserCacheService.getCachedProfilePicture()
+        };
+
         return {
-          'userProfile': await _getFallbackUserProfile(headers),
+          'userProfile': userProfile,
           'learningStats': {
-            'completedLessons': 3,
-            'streak': 5,
+            'completedLessons': completedLessons,
+            'streak': streak,
             'averageQuizScore': 85,
-            'totalLearningMinutes': 120,
+            'totalLearningMinutes': completedLessons * 10,
             'passRate': 90
           },
           'recommendedCourses': [
@@ -311,151 +527,124 @@ class ProfileService {
               'language': {'name': 'Kinyarwanda', 'code': 'RW'}
             }
           ],
-          'courseProgress': {
-            '1': 30.0 // 30% progress on course 1
-          }
+          'courseProgress': {'1': courseProgress}
         };
       }
     } catch (e) {
-      print("Error fetching dashboard data: $e");
-      
-      // Return empty data structure instead of throwing
-      return {
-        'userProfile': await _getFallbackUserProfile(null),
-        'learningStats': {
-          'completedLessons': 3,
-          'streak': 5,
-          'averageQuizScore': 85,
-          'totalLearningMinutes': 120,
-          'passRate': 90
-        },
-        'recommendedCourses': [
-          {
-            'id': 1,
-            'title': 'Basic Kinyarwanda',
-            'level': 'Beginner',
-            'language': {'name': 'Kinyarwanda', 'code': 'RW'}
-          }
-        ],
-        'courseProgress': {
-          '1': 30.0 // 30% progress on course 1
-        }
-      };
+      print("Error in name fallback: $e");
     }
-  }
-  
-  // Helper method to get user profile from other endpoints if dashboard fails
-  Future<Map<String, dynamic>> _getFallbackUserProfile(Map<String, String>? headers) async {
+
+    // If that fails, try to get the cached profile
     try {
-      // Try to get cached user profile first
       final cachedProfile = await UserCacheService.getCachedUserProfile();
       if (cachedProfile != null) {
-        // Convert to map
         return {
-          'id': cachedProfile.id,
-          'firstName': cachedProfile.firstName,
-          'lastName': cachedProfile.lastName,
-          'email': cachedProfile.email,
-          'user': {
+          'userProfile': {
+            'id': cachedProfile.id,
             'firstName': cachedProfile.firstName,
             'lastName': cachedProfile.lastName,
-            'email': cachedProfile.email
-          }
+            'email': cachedProfile.email,
+            'profilePicture': cachedProfile.profilePicture,
+            'user': {
+              'firstName': cachedProfile.firstName,
+              'lastName': cachedProfile.lastName,
+              'email': cachedProfile.email
+            }
+          },
+          'learningStats': {
+            'completedLessons': completedLessons,
+            'streak': streak,
+            'averageQuizScore': 85,
+            'totalLearningMinutes': completedLessons * 10,
+            'passRate': 90
+          },
+          'recommendedCourses': [
+            {
+              'id': 1,
+              'title': 'Basic Kinyarwanda',
+              'level': 'Beginner',
+              'language': {'name': 'Kinyarwanda', 'code': 'RW'}
+            }
+          ],
+          'courseProgress': {'1': courseProgress}
         };
       }
-      
-      // If no cached profile and no headers, use mock data
-      if (headers == null) {
-        final mockUser = _createMockProfile();
-        return {
-          'id': mockUser.id,
-          'firstName': mockUser.firstName,
-          'lastName': mockUser.lastName,
-          'email': mockUser.email,
-          'user': {
-            'firstName': mockUser.firstName,
-            'lastName': mockUser.lastName,
-            'email': mockUser.email
-          }
-        };
-      }
-      
-      // Try to get profile from auth endpoint
-      try {
-        final response = await http
-            .get(Uri.parse('$baseUrl/auth/me'), headers: headers)
-            .timeout(_timeout);
-            
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          final userData = data['data'] ?? data;
-          
-          return {
-            'id': userData['id'] ?? 0,
-            'firstName': userData['firstName'],
-            'lastName': userData['lastName'],
-            'email': userData['email'],
-            'user': userData
-          };
-        }
-      } catch (e) {
-        print("Failed to get user from auth endpoint: $e");
-      }
-      
-      // If all else fails, return mock data
-      final mockUser = _createMockProfile();
-      return {
-        'id': mockUser.id,
-        'firstName': mockUser.firstName,
-        'lastName': mockUser.lastName,
-        'email': mockUser.email,
-        'user': {
-          'firstName': mockUser.firstName,
-          'lastName': mockUser.lastName,
-          'email': mockUser.email
-        }
-      };
     } catch (e) {
-      print("Error in _getFallbackUserProfile: $e");
-      
-      // Return mock data as last resort
-      final mockUser = _createMockProfile();
-      return {
+      print("Error getting cached profile: $e");
+    }
+
+    // Last resort - use mock data with real progress values
+    final mockUser = _createMockProfile();
+    return {
+      'userProfile': {
         'id': mockUser.id,
         'firstName': mockUser.firstName,
         'lastName': mockUser.lastName,
         'email': mockUser.email,
+        'profilePicture': mockUser.profilePicture,
         'user': {
           'firstName': mockUser.firstName,
           'lastName': mockUser.lastName,
           'email': mockUser.email
         }
-      };
-    }
+      },
+      'learningStats': {
+        'completedLessons': completedLessons,
+        'streak': streak,
+        'averageQuizScore': 85,
+        'totalLearningMinutes': completedLessons * 10,
+        'passRate': 90
+      },
+      'recommendedCourses': [
+        {
+          'id': 1,
+          'title': 'Basic Kinyarwanda',
+          'level': 'Beginner',
+          'language': {'name': 'Kinyarwanda', 'code': 'RW'}
+        }
+      ],
+      'courseProgress': {'1': courseProgress}
+    };
   }
 
   Future<Map<String, String>> getUserName() async {
     try {
+      // Try to get from existing identity first
+      final identity = await UserCacheService.getCurrentUserIdentity();
+      if (identity != null && identity.firstName.isNotEmpty) {
+        print("Using existing identity for user name: ${identity.firstName}");
+        return {
+          'firstName': identity.firstName,
+          'lastName': identity.lastName,
+          'email': identity.email
+        };
+      }
+
       final headers = await getHeaders();
       print("Getting user name from $baseUrl/profile/name");
       final response = await http
           .get(Uri.parse('$baseUrl/profile/name'), headers: headers)
           .timeout(_timeout);
-          
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final nameData = data['data'] as Map<String, dynamic>;
-        
-        print("Successfully retrieved user name: ${nameData['firstName']} ${nameData['lastName']}");
-        
-        // Cache the name data
-        if (nameData['firstName'] != null) {
-          await UserCacheService.cacheFirstName(nameData['firstName']);
-        }
-        if (nameData['email'] != null) {
-          await UserCacheService.cacheEmail(nameData['email']);
-        }
-        
+
+        print(
+            "Successfully retrieved user name: ${nameData['firstName']} ${nameData['lastName']}");
+
+        // Create user identity object
+        final userIdentity = UserIdentity(
+            id: await UserCacheService.getCachedUserId(),
+            firstName: nameData['firstName'] ?? '',
+            lastName: nameData['lastName'] ?? '',
+            email: nameData['email'] ?? '',
+            profilePicture: await UserCacheService.getCachedProfilePicture(),
+            streak: await getUserStreak());
+
+        // Cache the complete identity
+        await UserCacheService.cacheUserIdentity(userIdentity);
+
         return {
           'firstName': nameData['firstName'] ?? '',
           'lastName': nameData['lastName'] ?? '',
@@ -464,28 +653,78 @@ class ProfileService {
       } else {
         print("Failed to get user name. Status code: ${response.statusCode}");
         print("Response body: ${response.body}");
-        
-        // Try getting user data from auth/me endpoint as fallback
+
+        // Try getting user data from dashboard endpoint as primary fallback
+        try {
+          print("Trying fallback to dashboard endpoint");
+          final dashboardResponse = await http
+              .get(Uri.parse('$baseUrl/dashboard'), headers: headers)
+              .timeout(_timeout);
+
+          if (dashboardResponse.statusCode == 200) {
+            final dashboardData = json.decode(dashboardResponse.body);
+            final dashboardContent = dashboardData['data'] ?? dashboardData;
+
+            if (dashboardContent.containsKey('userProfile') &&
+                dashboardContent['userProfile'] != null &&
+                dashboardContent['userProfile'].containsKey('user') &&
+                dashboardContent['userProfile']['user'] != null) {
+              final user = dashboardContent['userProfile']['user'];
+              print(
+                  "Got user data from dashboard endpoint: ${user['firstName']}");
+
+              // Create user identity
+              final userIdentity = UserIdentity(
+                  id: user['id'] is int
+                      ? user['id']
+                      : int.tryParse(user['id'].toString()) ?? 0,
+                  firstName: user['firstName'] ?? '',
+                  lastName: user['lastName'] ?? '',
+                  email: user['email'] ?? '',
+                  profilePicture: dashboardContent['userProfile']
+                      ['profilePicture'],
+                  streak: await getUserStreak());
+
+              await UserCacheService.cacheUserIdentity(userIdentity);
+
+              return {
+                'firstName': user['firstName'] ?? '',
+                'lastName': user['lastName'] ?? '',
+                'email': user['email'] ?? ''
+              };
+            }
+          }
+        } catch (dashboardError) {
+          print("Error in dashboard fallback: $dashboardError");
+        }
+
+        // Try getting user data from auth/me endpoint as secondary fallback
         try {
           print("Trying fallback to auth/me endpoint");
           final userResponse = await http
               .get(Uri.parse('$baseUrl/auth/me'), headers: headers)
               .timeout(_timeout);
-              
+
           if (userResponse.statusCode == 200) {
             final userData = json.decode(userResponse.body);
             final user = userData['data'] ?? userData;
-            
+
             print("Got user data from auth endpoint: ${user['firstName']}");
-            
-            // Cache the name data
-            if (user['firstName'] != null) {
-              await UserCacheService.cacheFirstName(user['firstName']);
-            }
-            if (user['email'] != null) {
-              await UserCacheService.cacheEmail(user['email']);
-            }
-            
+
+            // Create user identity
+            final userIdentity = UserIdentity(
+                id: user['id'] is int
+                    ? user['id']
+                    : int.tryParse(user['id'].toString()) ?? 0,
+                firstName: user['firstName'] ?? '',
+                lastName: user['lastName'] ?? '',
+                email: user['email'] ?? '',
+                profilePicture:
+                    await UserCacheService.getCachedProfilePicture(),
+                streak: await getUserStreak());
+
+            await UserCacheService.cacheUserIdentity(userIdentity);
+
             return {
               'firstName': user['firstName'] ?? '',
               'lastName': user['lastName'] ?? '',
@@ -493,64 +732,95 @@ class ProfileService {
             };
           }
         } catch (fallbackError) {
-          print("Error in name fallback: $fallbackError");
+          print("Error in auth fallback: $fallbackError");
         }
-        
-        throw Exception('Failed to get user name: ${response.statusCode} - ${response.body}');
+
+        // Try existing identity as final fallback
+        final cachedIdentity = await UserCacheService.getCurrentUserIdentity();
+        if (cachedIdentity != null && cachedIdentity.firstName.isNotEmpty) {
+          return {
+            'firstName': cachedIdentity.firstName,
+            'lastName': cachedIdentity.lastName,
+            'email': cachedIdentity.email
+          };
+        }
+
+        throw Exception('Failed to get user name from any source');
       }
     } catch (e) {
       print('Error getting user name: $e');
-      // Return cached data as fallback
-      final firstName = await UserCacheService.getCachedFirstName();
-      final email = await UserCacheService.getCachedEmail();
-      
-      // Avoid returning empty or default values
-      if (firstName.isNotEmpty && firstName != "User" && firstName != "Buntu") {
+
+      // Try existing identity as fallback
+      final identity = await UserCacheService.getCurrentUserIdentity();
+      if (identity != null && identity.firstName.isNotEmpty) {
         return {
-          'firstName': firstName,
-          'lastName': '',
-          'email': email ?? ''
+          'firstName': identity.firstName,
+          'lastName': identity.lastName,
+          'email': identity.email
         };
       }
-      
+
       // If we don't have good cached data, try one more approach - get directly from localStorage
       try {
         final prefs = await SharedPreferences.getInstance();
         final storedFirstName = prefs.getString('user_firstName');
+        final storedLastName = prefs.getString('user_lastName');
         final storedEmail = prefs.getString('user_email');
-        
-        if (storedFirstName != null && storedFirstName.isNotEmpty) {
-          print("Found user name in localStorage: $storedFirstName");
+
+        // Try additional keys as fallback
+        final storedName = prefs.getString('user_name');
+        final storedUsername = prefs.getString('username');
+
+        // Prioritize the most likely to be correct
+        String? bestFirstName = storedFirstName;
+        if (bestFirstName == null || bestFirstName.isEmpty) {
+          bestFirstName = storedName;
+        }
+        if (bestFirstName == null || bestFirstName.isEmpty) {
+          bestFirstName = storedUsername;
+        }
+
+        if (bestFirstName != null && bestFirstName.isNotEmpty) {
+          print("Found user name in localStorage: $bestFirstName");
+
+          // Cache this for future use
+          await UserCacheService.cacheFirstName(bestFirstName);
+          if (storedEmail != null && storedEmail.isNotEmpty) {
+            await UserCacheService.cacheEmail(storedEmail);
+          }
+
+          // Cache user ID if available
+          if (bestFirstName != null && bestFirstName.isNotEmpty) {
+            await UserCacheService.cacheUserId(int.parse(bestFirstName));
+          }
+
           return {
-            'firstName': storedFirstName,
-            'lastName': prefs.getString('user_lastName') ?? '',
+            'firstName': bestFirstName,
+            'lastName': storedLastName ?? '',
             'email': storedEmail ?? ''
           };
         }
       } catch (storageError) {
         print("Error accessing localStorage: $storageError");
       }
-      
-      // As a very last resort, return an empty map
-      return {
-        'firstName': '',
-        'lastName': '',
-        'email': ''
-      };
+
+      // As a very last resort, create a default user name
+      // Don't return empty values, use identity from cache if possible
+      return {'firstName': '', 'lastName': '', 'email': ''};
     }
   }
 
   // Create a mock profile for development when backend is not available
   UserProfile _createMockProfile() {
-    // Use generic data instead of specific mock data
+    // Use empty data instead of hardcoded mock values
     return UserProfile(
       id: 1,
-      firstName: "Guest",
-      lastName: "User",
-      email: "guest@afrilingo.com",
+      firstName: "",
+      lastName: "",
+      email: "",
       country: "Rwanda",
       firstLanguage: "English",
-      profilePicture: "https://api.dicebear.com/7.x/avataaars/svg?seed=guest",
+      profilePicture: null,
       reasonToLearn: "To learn African languages",
       languagesToLearn: [],
       dailyReminders: true,
@@ -558,4 +828,155 @@ class ProfileService {
       preferredLearningTime: "19:00",
     );
   }
-} 
+
+  // Add a dedicated method to get streak data
+  Future<int> getUserStreak() async {
+    try {
+      // First try to get cached streak for immediate display
+      final cachedStreak = await UserCacheService.getCachedStreak();
+
+      // If we have a cached streak, use it while we fetch the latest
+      int streak = cachedStreak;
+
+      final headers = await getHeaders();
+
+      // Try using the dedicated streak endpoint first - this is now the preferred method
+      try {
+        print("Getting streak from dedicated streak endpoint");
+        final streakResponse = await http
+            .get(Uri.parse('$baseUrl/progress/streak'), headers: headers)
+            .timeout(_timeout);
+
+        if (streakResponse.statusCode == 200) {
+          final data = json.decode(streakResponse.body);
+          final responseData = data['data'] ?? data;
+
+          if (responseData is Map && responseData.containsKey('streak')) {
+            final fetchedStreak = responseData['streak'];
+            if (fetchedStreak is int || fetchedStreak is double) {
+              streak =
+                  fetchedStreak is int ? fetchedStreak : fetchedStreak.toInt();
+              // Cache the latest streak value
+              await UserCacheService.cacheStreak(streak);
+              print("Got streak from dedicated endpoint: $streak");
+              return streak;
+            }
+          }
+        } else {
+          print("Streak endpoint failed: ${streakResponse.statusCode}");
+        }
+      } catch (e) {
+        print("Error getting streak from dedicated endpoint: $e");
+      }
+
+      // Try using the dashboard endpoint as fallback
+      try {
+        print("Getting streak from dashboard endpoint");
+        final dashboardResponse = await http
+            .get(Uri.parse('$baseUrl/dashboard'), headers: headers)
+            .timeout(_timeout);
+
+        if (dashboardResponse.statusCode == 200) {
+          final data = json.decode(dashboardResponse.body);
+          final dashboardData = data['data'] ?? data;
+
+          if (dashboardData.containsKey('learningStats') &&
+              dashboardData['learningStats'] != null &&
+              dashboardData['learningStats'].containsKey('streak')) {
+            final fetchedStreak = dashboardData['learningStats']['streak'];
+            if (fetchedStreak is int) {
+              streak = fetchedStreak;
+              // Cache the latest streak value
+              await UserCacheService.cacheStreak(streak);
+              print("Got streak from dashboard: $streak");
+              return streak;
+            }
+          }
+        } else {
+          print("Dashboard endpoint failed: ${dashboardResponse.statusCode}");
+        }
+      } catch (e) {
+        print("Error getting streak from dashboard: $e");
+      }
+
+      // If we have a cached streak, return it
+      if (cachedStreak > 0) {
+        return cachedStreak;
+      }
+
+      // Try to get from identity
+      final identity = await UserCacheService.getCurrentUserIdentity();
+      if (identity != null && identity.streak > 0) {
+        return identity.streak;
+      }
+
+      // If all methods fail and no cached streak, return 0
+      return 0;
+    } catch (e) {
+      print("Error in getUserStreak: $e");
+      // Try to get cached streak as last resort
+      final cachedStreak = await UserCacheService.getCachedStreak();
+      return cachedStreak;
+    }
+  }
+
+  // Get course progress for a specific course
+  Future<double> getCourseProgress(int courseId) async {
+    try {
+      final headers = await getHeaders();
+
+      // First try to get from dashboard data
+      final dashboardData = await getUserDashboard();
+
+      if (dashboardData.containsKey('courseProgress') &&
+          dashboardData['courseProgress'] != null) {
+        final progress = dashboardData['courseProgress'][courseId.toString()];
+        if (progress != null) {
+          return (progress is double)
+              ? progress
+              : double.parse(progress.toString());
+        }
+      }
+
+      // If we couldn't get from dashboard, try the completed lessons count approach
+      final prefs = await SharedPreferences.getInstance();
+      final completedLessons = prefs.getInt('completed_lessons_count') ?? 0;
+
+      // Estimate course progress based on completed lessons
+      // Assuming a course has around 10 lessons on average
+      return (completedLessons / 10.0 * 100).clamp(0.0, 100.0);
+    } catch (e) {
+      print("Error getting course progress: $e");
+      return 0.0;
+    }
+  }
+
+  // Get completed lessons count
+  Future<int> getCompletedLessonsCount() async {
+    try {
+      final headers = await getHeaders();
+
+      // First try to get from dashboard data
+      final dashboardData = await getUserDashboard();
+
+      if (dashboardData.containsKey('learningStats') &&
+          dashboardData['learningStats'] != null &&
+          dashboardData['learningStats'].containsKey('completedLessons')) {
+        final completedLessons =
+            dashboardData['learningStats']['completedLessons'];
+        if (completedLessons != null) {
+          return completedLessons is int
+              ? completedLessons
+              : int.parse(completedLessons.toString());
+        }
+      }
+
+      // If we couldn't get from dashboard, use the local storage value
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt('completed_lessons_count') ?? 0;
+    } catch (e) {
+      print("Error getting completed lessons count: $e");
+      return 0;
+    }
+  }
+}
