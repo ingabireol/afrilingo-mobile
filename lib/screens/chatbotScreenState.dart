@@ -6,9 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
+import 'package:provider/provider.dart';
 import '../services/deepseek_service.dart';
 import '../widgets/auth/navigation_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/theme_provider.dart';
+import '../utils/app_theme.dart';
 
 // African-inspired color palette
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
@@ -35,6 +38,8 @@ class ChatMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -49,12 +54,13 @@ class ChatMessage extends StatelessWidget {
           color: isError
               ? Colors.red.withOpacity(0.1)
               : isUser
-                  ? kPrimaryColor.withOpacity(0.1)
-                  : kCardColor,
+                  ? themeProvider.primaryColor.withOpacity(0.1)
+                  : themeProvider.cardColor,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black
+                  .withOpacity(themeProvider.isDarkMode ? 0.3 : 0.05),
               blurRadius: 3,
               offset: const Offset(0, 1),
             ),
@@ -62,7 +68,9 @@ class ChatMessage extends StatelessWidget {
           border: isUser
               ? null
               : Border.all(
-                  color: isError ? Colors.red.withOpacity(0.3) : kDividerColor),
+                  color: isError
+                      ? Colors.red.withOpacity(0.3)
+                      : themeProvider.dividerColor),
         ),
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.75,
@@ -73,8 +81,8 @@ class ChatMessage extends StatelessWidget {
             color: isError
                 ? Colors.red
                 : isUser
-                    ? kPrimaryColor
-                    : kTextColor,
+                    ? themeProvider.primaryColor
+                    : themeProvider.textColor,
             fontSize: 16,
             height: 1.4,
           ),
@@ -91,7 +99,8 @@ class ChatbotScreen extends StatefulWidget {
   _ChatbotScreenState createState() => _ChatbotScreenState();
 }
 
-class _ChatbotScreenState extends State<ChatbotScreen> {
+class _ChatbotScreenState extends State<ChatbotScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   DeepSeekService? _deepSeekService;
   final List<ChatMessage> _messages = [];
@@ -101,10 +110,31 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final ScrollController _scrollController = ScrollController();
   final String _modelName = "Mixtral 8x7B";
 
+  // Animation controller
+  late AnimationController _animationController;
+  late Animation<double> _fadeInAnimation;
+
   @override
   void initState() {
     super.initState();
+
+    // Initialize animation controller
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOut,
+      ),
+    );
+
     _initializeDeepSeek();
+
+    // Start animation
+    _animationController.forward();
   }
 
   @override
@@ -112,6 +142,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     // Clean up controllers
     _messageController.dispose();
     _scrollController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -170,6 +201,351 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
   }
 
+  void _showApiKeyInputDialog() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        final TextEditingController controller = TextEditingController();
+
+        return AlertDialog(
+          backgroundColor: themeProvider.cardColor,
+          title: Text(
+            'Enter OpenRouter API Key',
+            style: TextStyle(
+              color: themeProvider.textColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Please enter your OpenRouter API key to use the Mixtral 8x7B model for enhanced Kinyarwanda conversations.',
+                style: TextStyle(
+                  color: themeProvider.textColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: 'sk-...',
+                  border: OutlineInputBorder(),
+                  hintStyle: TextStyle(color: themeProvider.lightTextColor),
+                  filled: true,
+                  fillColor: themeProvider.isDarkMode
+                      ? Colors.black12
+                      : Colors.grey.shade50,
+                ),
+                style: TextStyle(color: themeProvider.textColor),
+                obscureText: true,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'The Mixtral 8x7B model provides more natural conversations in Kinyarwanda.',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                  color: themeProvider.lightTextColor,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: themeProvider.accentColor,
+              ),
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeProvider.primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Save'),
+              onPressed: () async {
+                final apiKey = controller.text.trim();
+                if (apiKey.isNotEmpty) {
+                  await DeepSeekService.saveApiKey(apiKey);
+                  Navigator.of(context).pop();
+                  _initializeDeepSeek();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    return Scaffold(
+      backgroundColor: themeProvider.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Afrilingo AI Chatbot',
+              style: TextStyle(
+                color: themeProvider.textColor,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            Text(
+              'Powered by $_modelName',
+              style: TextStyle(
+                color: themeProvider.lightTextColor,
+                fontSize: 12,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+        iconTheme: IconThemeData(color: themeProvider.textColor),
+        systemOverlayStyle: themeProvider.isDarkMode
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.info_outline,
+              color: themeProvider.accentColor,
+            ),
+            onPressed: () {
+              _showInfoDialog();
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.settings,
+              color: themeProvider.textColor,
+            ),
+            onPressed: () {
+              _showApiKeyInputDialog();
+            },
+          ),
+        ],
+      ),
+      body: FadeTransition(
+        opacity: _fadeInAnimation,
+        child: Column(
+          children: [
+            // Messages area
+            Expanded(
+              child: _messages.isEmpty
+                  ? _buildEmptyState(themeProvider)
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        return _messages[index];
+                      },
+                    ),
+            ),
+
+            // Bottom input area
+            Container(
+              decoration: BoxDecoration(
+                color: themeProvider.cardColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 5,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: SafeArea(
+                child: Row(
+                  children: [
+                    // Input field
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: themeProvider.isDarkMode
+                              ? Colors.black.withOpacity(0.3)
+                              : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: themeProvider.dividerColor,
+                          ),
+                        ),
+                        child: TextField(
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            hintText: 'Type a message in any language...',
+                            hintStyle:
+                                TextStyle(color: themeProvider.lightTextColor),
+                            border: InputBorder.none,
+                            contentPadding:
+                                const EdgeInsets.symmetric(horizontal: 16),
+                          ),
+                          style: TextStyle(color: themeProvider.textColor),
+                          maxLines: null,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: _isApiInitialized && !_isSending
+                              ? (text) => _handleMessage(text)
+                              : null,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Send button
+                    Container(
+                      decoration: BoxDecoration(
+                        color: themeProvider.primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: _isSending
+                            ? SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.send, color: Colors.white),
+                        onPressed: _isApiInitialized && !_isSending
+                            ? () => _handleMessage(_messageController.text)
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: const CustomBottomNavigationBar(selectedIndex: 4),
+    );
+  }
+
+  Widget _buildEmptyState(ThemeProvider themeProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 64,
+            color: themeProvider.lightTextColor.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Start a conversation in any language',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: themeProvider.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'The AI will respond in Kinyarwanda, helping you learn new words and phrases.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: themeProvider.lightTextColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showInfoDialog() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: themeProvider.cardColor,
+        title: Text(
+          'About Afrilingo AI Chatbot',
+          style: TextStyle(
+            color: themeProvider.textColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This chatbot uses the Mixtral 8x7B model to provide natural conversations in Kinyarwanda.',
+              style: TextStyle(color: themeProvider.textColor),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Tips:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: themeProvider.textColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildTipItem(
+              '• You can ask questions in English, French, or any other language',
+              themeProvider,
+            ),
+            _buildTipItem(
+              '• The AI will always respond in Kinyarwanda',
+              themeProvider,
+            ),
+            _buildTipItem(
+              '• Try asking for translations, explanations, or cultural information',
+              themeProvider,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: themeProvider.primaryColor,
+            ),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTipItem(String text, ThemeProvider themeProvider) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: themeProvider.textColor,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleMessage(String message) async {
     if (message.isEmpty) return;
 
@@ -200,7 +576,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (mounted) {
         setState(() {
           _messages.add(ChatMessage(
-            text: 'Ntabwo nashoboye gusubiza. Ongera ugerageze. Error: $error',
+            text: "Error: $error",
             isUser: false,
             isError: true,
           ));
@@ -211,203 +587,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     }
   }
 
-  // Find the .env file in the project directory
-  String _findEnvFile() {
-    // Potential directories to search
-    List<String> searchPaths = [
-      // Current directory
-      Directory.current.path,
-      // Project root
-      'd:/clb/Workspace/afrilingo/afrilingo',
-      // Lib directory
-      'd:/clb/Workspace/afrilingo/afrilingo/lib',
-      // Absolute path
-      'd:/clb/Workspace/afrilingo/afrilingo/.env'
-    ];
-
-    for (var searchPath in searchPaths) {
-      final envFile = File(path.join(searchPath, '.env'));
-      if (envFile.existsSync()) {
-        print('Found .env file at: ${envFile.path}');
-        return envFile.path;
-      }
-    }
-
-    // If no .env file found, throw an exception
-    throw Exception(
-        'No .env file found. Please create one with DEEPSEEK_API_KEY');
-  }
-
-  // Show API key dialog for errors or missing key
-  void _showApiKeyDialog(String message) {
-    _showApiKeyInputDialog();
-  }
-
-  // Show API key input dialog
-  void _showApiKeyInputDialog() {
-    final TextEditingController apiKeyController = TextEditingController();
-    bool isValidFormat = false;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('OpenRouter API Key Required'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'To use the Mixtral 8x7B AI for Kinyarwanda conversations, you need to provide an OpenRouter API key.',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '1. Go to https://openrouter.ai/keys\n'
-                      '2. Sign in or create an account\n'
-                      '3. Create a new API key\n'
-                      '4. Copy the key and paste it below',
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: apiKeyController,
-                      decoration: InputDecoration(
-                        labelText: 'API Key',
-                        border: const OutlineInputBorder(),
-                        hintText: 'sk-...',
-                        errorText:
-                            apiKeyController.text.isNotEmpty && !isValidFormat
-                                ? 'Key must start with sk-'
-                                : null,
-                        prefixIcon: const Icon(Icons.key),
-                      ),
-                      obscureText: true,
-                      onChanged: (value) {
-                        setState(() {
-                          isValidFormat = value.trim().startsWith('sk-');
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Note: Your API key will be securely stored for future use.',
-                      style:
-                          TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
-                    ),
-                  ],
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('Cancel'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    setState(() {
-                      _isLoading = false;
-                    });
-                  },
-                ),
-                TextButton(
-                  child: const Text('Save & Continue'),
-                  onPressed: () async {
-                    final apiKey = apiKeyController.text.trim();
-                    if (apiKey.isNotEmpty && apiKey.startsWith('sk-')) {
-                      // Save API key to preferences
-                      await DeepSeekService.saveApiKey(apiKey);
-
-                      Navigator.of(context).pop();
-
-                      // Initialize service with the provided API key
-                      try {
-                        _deepSeekService = DeepSeekService(
-                            apiKey, 'mistralai/mixtral-8x7b-instruct');
-                        setState(() {
-                          _isLoading = false;
-                          _isApiInitialized = true;
-                        });
-                        _addWelcomeMessage();
-                      } catch (e) {
-                        _showErrorDialog('Failed to initialize service: $e');
-                      }
-                    }
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Error'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                message,
-                style: const TextStyle(color: Colors.red),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Please check:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '1. Your API key is valid and starts with sk-\n'
-                '2. The API key has sufficient permissions\n'
-                '3. You have an active internet connection',
-              ),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Try Again'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showApiKeyInputDialog();
-              },
-            ),
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() {
-                  _isLoading = false;
-                  _isApiInitialized = false;
-                });
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Add a welcome message to the chat
-  void _addWelcomeMessage() {
-    if (_messages.isNotEmpty) _messages.removeLast();
-    _messages.add(const ChatMessage(
-      text: 'Muraho! Nitwa Afrilingo. Mbwira amakuru yawe.',
-      isUser: false,
-    ));
-  }
-
-  // Scroll to bottom of chat
   void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Add a slight delay to ensure the list is updated before scrolling
+    Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
@@ -418,291 +600,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBackgroundColor,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Kinyarwanda Chat',
-              style: TextStyle(
-                color: kTextColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            Text(
-              'Powered by $_modelName',
-              style: TextStyle(
-                color: kLightTextColor,
-                fontSize: 12,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Settings',
-            onPressed: () {
-              _showApiKeyInputDialog();
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _isApiInitialized
-                  ? (_messages.isEmpty ? _buildEmptyState() : _buildChatList())
-                  : _buildLoadingOrError(),
-            ),
-          ),
-          _buildInputArea(),
-        ],
-      ),
-      bottomNavigationBar: const CustomBottomNavigationBar(selectedIndex: 3),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.chat_bubble_outline,
-            size: 64,
-            color: kLightTextColor.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No messages yet. Start chatting in Kinyarwanda!',
-            style: TextStyle(color: kLightTextColor),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          _buildSuggestions(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuggestions() {
-    final suggestions = _deepSeekService?.getConversationStarters() ??
-        [
-          'Muraho!',
-          'Amakuru?',
-          'Witwa nde?',
-        ];
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
-      children: suggestions.map((suggestion) {
-        return ActionChip(
-          label: Text(suggestion),
-          backgroundColor: kBackgroundColor,
-          side: BorderSide(color: kPrimaryColor.withOpacity(0.3)),
-          onPressed: () => _handleMessage(suggestion),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildChatList() {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      itemCount: _messages.length + (_isSending ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _messages.length && _isSending) {
-          // Show typing indicator
-          return Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              margin: const EdgeInsets.only(
-                top: 8,
-                bottom: 8,
-                left: 16,
-                right: 64,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: kCardColor,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-                border: Border.all(color: kDividerColor),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(kPrimaryColor),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Ndatega...',
-                    style: TextStyle(
-                      color: kLightTextColor,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-        return _messages[index];
-      },
-    );
-  }
-
-  Widget _buildLoadingOrError() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _isLoading
-              ? CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(kPrimaryColor),
-                )
-              : Icon(
-                  Icons.error_outline,
-                  size: 48,
-                  color: Colors.red[300],
-                ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              _messages.isNotEmpty
-                  ? _messages.last.text
-                  : 'Initializing Mixtral 8x7B...',
-              style: TextStyle(color: kLightTextColor),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 24),
-          if (!_isLoading)
-            ElevatedButton(
-              onPressed: _initializeDeepSeek,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimaryColor,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: const Text('Try Again'),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInputArea() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      decoration: BoxDecoration(
-        color: kCardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 5,
-            offset: const Offset(0, -1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: 'Type your message...',
-                hintStyle: TextStyle(color: kLightTextColor),
-                filled: true,
-                fillColor: kBackgroundColor,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                suffixIcon: _messageController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear,
-                            color: kLightTextColor, size: 20),
-                        onPressed: () {
-                          setState(() {
-                            _messageController.clear();
-                          });
-                        },
-                      )
-                    : null,
-              ),
-              onChanged: (text) {
-                setState(() {}); // Rebuild to show/hide clear button
-              },
-              onSubmitted: (_) =>
-                  _handleMessage(_messageController.text.trim()),
-              enabled: !_isSending && _isApiInitialized,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: _isSending || !_isApiInitialized
-                  ? kPrimaryColor.withOpacity(0.5)
-                  : kPrimaryColor,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: kPrimaryColor.withOpacity(0.4),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              icon: _isSending
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Icon(Icons.send, color: Colors.white),
-              onPressed: _isSending || !_isApiInitialized
-                  ? null
-                  : () => _handleMessage(_messageController.text.trim()),
-            ),
-          ),
-        ],
-      ),
-    );
+  void _addWelcomeMessage() {
+    setState(() {
+      _messages.add(const ChatMessage(
+        text:
+            "Muraho! Ndi Afrilingo AI, nzakufasha kwiga Ikinyarwanda. Ushobora kumbaza ikibazo mu rurimi urwo ari rwo rwose, nzagusubiza mu Kinyarwanda.\n\n(Hello! I am Afrilingo AI, I will help you learn Kinyarwanda. You can ask me questions in any language, and I will respond in Kinyarwanda.)",
+        isUser: false,
+      ));
+    });
   }
 }

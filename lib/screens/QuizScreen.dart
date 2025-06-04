@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:afrilingo/services/theme_provider.dart';
 import '../models/quiz.dart';
 import '../services/lesson_service.dart';
 
-// African-inspired color palette (same as lesson_content_widget)
+// Keeping these as fallback colors
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
 const Color kSecondaryColor = Color(0xFFC78539); // Light brown
 const Color kAccentColor = Color(0xFF546CC3); // Blue accent
@@ -23,11 +25,13 @@ class QuizStartScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: themeProvider.backgroundColor,
       appBar: AppBar(
         title: const Text('Quiz'),
-        backgroundColor: kPrimaryColor,
+        backgroundColor: themeProvider.primaryColor,
         foregroundColor: Colors.white,
       ),
       body: Center(
@@ -37,13 +41,13 @@ class QuizStartScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: kAccentColor.withOpacity(0.1),
+                color: themeProvider.accentColor.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.quiz,
                 size: 64,
-                color: kAccentColor,
+                color: themeProvider.accentColor,
               ),
             ),
             const SizedBox(height: 32),
@@ -52,7 +56,7 @@ class QuizStartScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: kPrimaryColor,
+                color: themeProvider.primaryColor,
               ),
             ),
             const SizedBox(height: 16),
@@ -63,7 +67,7 @@ class QuizStartScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: kLightTextColor,
+                  color: themeProvider.lightTextColor,
                   height: 1.5,
                 ),
               ),
@@ -79,7 +83,7 @@ class QuizStartScreen extends StatelessWidget {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimaryColor,
+                backgroundColor: themeProvider.primaryColor,
                 foregroundColor: Colors.white,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
@@ -178,19 +182,22 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   void _handleSubmissionError() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: themeProvider.cardColor,
         title: Text(
           'Error Submitting Quiz',
           style: TextStyle(
-            color: kPrimaryColor,
+            color: themeProvider.primaryColor,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           'There was a problem submitting your quiz. Would you like to try again or return to your lesson?',
-          style: TextStyle(color: kTextColor),
+          style: TextStyle(color: themeProvider.textColor),
         ),
         actions: [
           TextButton(
@@ -200,12 +207,12 @@ class _QuizScreenState extends State<QuizScreen> {
             },
             child: Text(
               'Try Again',
-              style: TextStyle(color: kPrimaryColor),
+              style: TextStyle(color: themeProvider.primaryColor),
             ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: kPrimaryColor,
+              backgroundColor: themeProvider.primaryColor,
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -293,19 +300,21 @@ class _QuizScreenState extends State<QuizScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: kBackgroundColor,
+        backgroundColor: themeProvider.backgroundColor,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: kPrimaryColor),
+              CircularProgressIndicator(color: themeProvider.primaryColor),
               const SizedBox(height: 16),
               Text(
                 'Loading quiz...',
                 style: TextStyle(
-                  color: kLightTextColor,
+                  color: themeProvider.lightTextColor,
                   fontSize: 16,
                 ),
               ),
@@ -317,10 +326,10 @@ class _QuizScreenState extends State<QuizScreen> {
 
     if (_error != null) {
       return Scaffold(
-        backgroundColor: kBackgroundColor,
+        backgroundColor: themeProvider.backgroundColor,
         appBar: AppBar(
           title: const Text('Error'),
-          backgroundColor: kPrimaryColor,
+          backgroundColor: themeProvider.primaryColor,
           foregroundColor: Colors.white,
         ),
         body: Center(
@@ -336,7 +345,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: kTextColor,
+                    color: themeProvider.textColor,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -345,14 +354,14 @@ class _QuizScreenState extends State<QuizScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: kLightTextColor,
+                    color: themeProvider.lightTextColor,
                   ),
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton(
                   onPressed: _loadQuiz,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: themeProvider.primaryColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 32, vertical: 12),
@@ -371,10 +380,10 @@ class _QuizScreenState extends State<QuizScreen> {
 
     if (_quiz == null) {
       return Scaffold(
-        backgroundColor: kBackgroundColor,
+        backgroundColor: themeProvider.backgroundColor,
         appBar: AppBar(
           title: const Text('Quiz'),
-          backgroundColor: kPrimaryColor,
+          backgroundColor: themeProvider.primaryColor,
           foregroundColor: Colors.white,
         ),
         body: Center(
@@ -383,14 +392,14 @@ class _QuizScreenState extends State<QuizScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.quiz, size: 64, color: kLightTextColor),
+                Icon(Icons.quiz, size: 64, color: themeProvider.lightTextColor),
                 const SizedBox(height: 24),
                 Text(
                   'No quiz available',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: kTextColor,
+                    color: themeProvider.textColor,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -399,7 +408,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: kLightTextColor,
+                    color: themeProvider.lightTextColor,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -408,7 +417,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: themeProvider.primaryColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 32, vertical: 12),
@@ -427,10 +436,10 @@ class _QuizScreenState extends State<QuizScreen> {
 
     if (_quizCompleted && _quizResult != null) {
       return Scaffold(
-        backgroundColor: kBackgroundColor,
+        backgroundColor: themeProvider.backgroundColor,
         appBar: AppBar(
           title: const Text('Quiz Results'),
-          backgroundColor: kPrimaryColor,
+          backgroundColor: themeProvider.primaryColor,
           foregroundColor: Colors.white,
         ),
         body: Center(
@@ -486,7 +495,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 ElevatedButton(
                   onPressed: _restartQuiz,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimaryColor,
+                    backgroundColor: themeProvider.primaryColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 32, vertical: 12),
@@ -502,7 +511,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     Navigator.pop(context);
                   },
                   style: TextButton.styleFrom(
-                    foregroundColor: kPrimaryColor,
+                    foregroundColor: themeProvider.primaryColor,
                   ),
                   child: const Text('Back to Lesson'),
                 ),
@@ -516,11 +525,11 @@ class _QuizScreenState extends State<QuizScreen> {
     final currentQuestion = _quiz!.questions[_currentQuestionIndex];
 
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: themeProvider.backgroundColor,
       appBar: AppBar(
         title: Text(
             'Question ${_currentQuestionIndex + 1}/${_quiz!.questions.length}'),
-        backgroundColor: kPrimaryColor,
+        backgroundColor: themeProvider.primaryColor,
         foregroundColor: Colors.white,
       ),
       body: SafeArea(
@@ -529,8 +538,8 @@ class _QuizScreenState extends State<QuizScreen> {
             // Progress indicator
             LinearProgressIndicator(
               value: (_currentQuestionIndex + 1) / _quiz!.questions.length,
-              backgroundColor: kDividerColor,
-              color: kPrimaryColor,
+              backgroundColor: themeProvider.dividerColor,
+              color: themeProvider.primaryColor,
               minHeight: 6,
             ),
             Expanded(
@@ -541,6 +550,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   children: [
                     Card(
                       elevation: 2,
+                      color: themeProvider.cardColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -554,7 +564,7 @@ class _QuizScreenState extends State<QuizScreen> {
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: kTextColor,
+                                color: themeProvider.textColor,
                               ),
                             ),
                           ],
@@ -568,11 +578,12 @@ class _QuizScreenState extends State<QuizScreen> {
                         padding: const EdgeInsets.only(bottom: 12.0),
                         child: Card(
                           elevation: isSelected ? 4 : 1,
+                          color: themeProvider.cardColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                             side: BorderSide(
                               color: isSelected
-                                  ? kPrimaryColor
+                                  ? themeProvider.primaryColor
                                   : Colors.transparent,
                               width: 2,
                             ),
@@ -596,12 +607,12 @@ class _QuizScreenState extends State<QuizScreen> {
                                       shape: BoxShape.circle,
                                       border: Border.all(
                                         color: isSelected
-                                            ? kPrimaryColor
-                                            : kLightTextColor,
+                                            ? themeProvider.primaryColor
+                                            : themeProvider.lightTextColor,
                                         width: 2,
                                       ),
                                       color: isSelected
-                                          ? kPrimaryColor
+                                          ? themeProvider.primaryColor
                                           : Colors.transparent,
                                     ),
                                     child: isSelected
@@ -619,8 +630,8 @@ class _QuizScreenState extends State<QuizScreen> {
                                       style: TextStyle(
                                         fontSize: 16,
                                         color: isSelected
-                                            ? kPrimaryColor
-                                            : kTextColor,
+                                            ? themeProvider.primaryColor
+                                            : themeProvider.textColor,
                                         fontWeight: isSelected
                                             ? FontWeight.bold
                                             : FontWeight.normal,
@@ -641,10 +652,11 @@ class _QuizScreenState extends State<QuizScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: themeProvider.cardColor,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black
+                        .withOpacity(themeProvider.isDarkMode ? 0.2 : 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, -4),
                   ),
@@ -676,7 +688,7 @@ class _QuizScreenState extends State<QuizScreen> {
                           icon: const Icon(Icons.arrow_back),
                           label: const Text('Previous'),
                           style: TextButton.styleFrom(
-                            foregroundColor: kPrimaryColor,
+                            foregroundColor: themeProvider.primaryColor,
                           ),
                         )
                       : const SizedBox(width: 100),
@@ -684,9 +696,10 @@ class _QuizScreenState extends State<QuizScreen> {
                     onPressed:
                         _selectedOptionId != null ? _submitQuizAnswer : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimaryColor,
+                      backgroundColor: themeProvider.primaryColor,
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: kLightTextColor.withOpacity(0.3),
+                      disabledBackgroundColor:
+                          themeProvider.lightTextColor.withOpacity(0.3),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(

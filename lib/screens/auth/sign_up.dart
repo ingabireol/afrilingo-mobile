@@ -139,7 +139,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Header
                   Text(
                     'Create Account',
@@ -208,12 +208,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: kPrimaryColor,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 elevation: 0,
-                                disabledBackgroundColor: kPrimaryColor.withOpacity(0.6),
+                                disabledBackgroundColor:
+                                    kPrimaryColor.withOpacity(0.6),
                               ),
                               child: _isLoading
                                   ? const SizedBox(
@@ -320,13 +322,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() {
         _isLoading = true;
       });
-      
+
       try {
         // Split the full name into first and last name
         final names = _nameController.text.split(' ');
         final firstName = names.first;
         final lastName = names.length > 1 ? names.last : '';
-        
+
         // Call the signUp method with the correct parameters
         final response = await _authService.signUp(
           firstName,
@@ -334,7 +336,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           _emailController.text,
           _passwordController.text,
         );
-        
+
         // Handle successful registration
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -400,7 +402,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.red, width: 1),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       validator: validator,
     );
@@ -413,15 +416,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
   ) {
     return TextFormField(
       controller: controller,
-      obscureText: isConfirmPassword ? _obscureConfirmPassword : _obscurePassword,
+      obscureText:
+          isConfirmPassword ? _obscureConfirmPassword : _obscurePassword,
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(Icons.lock_outline, color: kLightTextColor),
         suffixIcon: IconButton(
           icon: Icon(
             isConfirmPassword
-                ? (_obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined)
-                : (_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                ? (_obscureConfirmPassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined)
+                : (_obscurePassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined),
             color: kLightTextColor,
           ),
           onPressed: () {
@@ -456,9 +464,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.red, width: 1),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
-      validator: (value) => _validatePassword(value, isConfirmPassword: isConfirmPassword),
+      validator: (value) =>
+          _validatePassword(value, isConfirmPassword: isConfirmPassword),
     );
   }
 

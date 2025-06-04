@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:afrilingo/services/theme_provider.dart';
 import 'foodanddrinks.dart';
 import '../../widgets/auth/navigation_bar.dart';
+import '../../utils/app_theme.dart';
+
 // African-inspired color palette
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
 const Color kSecondaryColor = Color(0xFFC78539); // Light brown
@@ -36,40 +40,44 @@ class _FilesPageState extends State<FilesPage>
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: themeProvider.backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: kTextColor),
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        iconTheme: IconThemeData(color: themeProvider.textColor),
+        systemOverlayStyle: themeProvider.isDarkMode
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         title: Column(
           children: [
             Text(
               _username,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: kTextColor,
+                color: themeProvider.textColor,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               _language,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
-                color: kLightTextColor,
+                color: themeProvider.lightTextColor,
               ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.search,
-              color: kPrimaryColor,
+              color: themeProvider.primaryColor,
             ),
             onPressed: () {
               // Handle search
@@ -78,13 +86,14 @@ class _FilesPageState extends State<FilesPage>
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: kPrimaryColor,
-          labelColor: kPrimaryColor,
-          unselectedLabelColor: kLightTextColor,
+          indicatorColor: themeProvider.primaryColor,
+          labelColor: themeProvider.primaryColor,
+          unselectedLabelColor: themeProvider.lightTextColor,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
           indicator: UnderlineTabIndicator(
-            borderSide: BorderSide(width: 3.0, color: kPrimaryColor),
+            borderSide:
+                BorderSide(width: 3.0, color: themeProvider.primaryColor),
             insets: const EdgeInsets.symmetric(horizontal: 16.0),
           ),
           tabs: const [
@@ -97,46 +106,67 @@ class _FilesPageState extends State<FilesPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildGridSection(),
-          _buildEmptyTab('No created files yet.'),
-          _buildEmptyTab('No saved files yet.'),
+          _buildGridSection(themeProvider),
+          _buildEmptyTab('No created files yet.', themeProvider),
+          _buildEmptyTab('No saved files yet.', themeProvider),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           // Add new file/set
         },
-        backgroundColor: kPrimaryColor,
+        backgroundColor: themeProvider.primaryColor,
         child: const Icon(Icons.add, color: Colors.white),
       ),
       bottomNavigationBar: const CustomBottomNavigationBar(selectedIndex: 1),
     );
   }
 
-  Widget _buildGridSection() {
+  Widget _buildGridSection(ThemeProvider themeProvider) {
     final List<Map<String, dynamic>> categories = [
       {'title': 'Colors', 'icon': Icons.palette, 'color': Colors.red.shade300},
-      {'title': 'Numbers', 'icon': Icons.numbers, 'color': Colors.blue.shade300},
-      {'title': 'Body parts', 'icon': Icons.accessibility_new, 'color': Colors.green.shade300},
-      {'title': 'Food & Drinks', 'icon': Icons.fastfood, 'color': Colors.orange.shade300, 'isSelected': true},
+      {
+        'title': 'Numbers',
+        'icon': Icons.numbers,
+        'color': Colors.blue.shade300
+      },
+      {
+        'title': 'Body parts',
+        'icon': Icons.accessibility_new,
+        'color': Colors.green.shade300
+      },
+      {
+        'title': 'Food & Drinks',
+        'icon': Icons.fastfood,
+        'color': Colors.orange.shade300,
+        'isSelected': true
+      },
       {'title': 'Beauty', 'icon': Icons.face, 'color': Colors.purple.shade300},
-      {'title': 'Clothes', 'icon': Icons.checkroom, 'color': Colors.teal.shade300},
+      {
+        'title': 'Clothes',
+        'icon': Icons.checkroom,
+        'color': Colors.teal.shade300
+      },
       {'title': 'Animals', 'icon': Icons.pets, 'color': Colors.brown.shade300},
-      {'title': 'Family', 'icon': Icons.family_restroom, 'color': Colors.indigo.shade300},
+      {
+        'title': 'Family',
+        'icon': Icons.family_restroom,
+        'color': Colors.indigo.shade300
+      },
     ];
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Title and description
-          const Text(
+          Text(
             'Learning Categories',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: kTextColor,
+              color: themeProvider.textColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -144,11 +174,11 @@ class _FilesPageState extends State<FilesPage>
             'Explore these categories to learn Kinyarwanda vocabulary',
             style: TextStyle(
               fontSize: 14,
-              color: kLightTextColor,
+              color: themeProvider.lightTextColor,
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Categories grid
           GridView.builder(
             shrinkWrap: true,
@@ -163,21 +193,27 @@ class _FilesPageState extends State<FilesPage>
             itemBuilder: (context, index) {
               final category = categories[index];
               final bool isSelected = category['isSelected'] == true;
-              
+
               return _buildCategoryCard(
                 title: category['title'],
                 icon: category['icon'],
                 color: category['color'],
                 isSelected: isSelected,
+                themeProvider: themeProvider,
                 onTap: () {
                   if (category['title'] == 'Food & Drinks') {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const FoodAndDrinks()),
+                      MaterialPageRoute(
+                          builder: (context) => const FoodAndDrinks()),
                     );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${category['title']} category coming soon')),
+                      SnackBar(
+                        content:
+                            Text('${category['title']} category coming soon'),
+                        backgroundColor: themeProvider.primaryColor,
+                      ),
                     );
                   }
                 },
@@ -194,102 +230,84 @@ class _FilesPageState extends State<FilesPage>
     required IconData icon,
     required Color color,
     bool isSelected = false,
+    required ThemeProvider themeProvider,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: kCardColor,
+          color: themeProvider.cardColor,
           borderRadius: BorderRadius.circular(16),
+          border: isSelected
+              ? Border.all(color: themeProvider.primaryColor, width: 2)
+              : Border.all(color: themeProvider.dividerColor),
           boxShadow: [
             BoxShadow(
-              color: isSelected
-                  ? kPrimaryColor.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.05),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
-          border: isSelected
-              ? Border.all(color: kPrimaryColor, width: 2)
-              : null,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 32, color: color),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: kTextColor,
-              ),
-            ),
-            if (isSelected)
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: kPrimaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  'In Progress',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: kPrimaryColor,
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 24,
                 ),
               ),
-          ],
+              const Spacer(),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: themeProvider.textColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '25 words',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: themeProvider.lightTextColor,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyTab(String message) {
+  Widget _buildEmptyTab(String message, ThemeProvider themeProvider) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.folder_open,
-            size: 80,
-            color: Colors.grey.shade300,
+            size: 64,
+            color: themeProvider.lightTextColor.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           Text(
             message,
-            style: const TextStyle(
-              fontSize: 18,
-              color: kLightTextColor,
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              // Handle create new
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Create New'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: kPrimaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+            style: TextStyle(
+              fontSize: 16,
+              color: themeProvider.lightTextColor,
             ),
           ),
         ],

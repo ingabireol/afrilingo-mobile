@@ -1,22 +1,27 @@
 import 'package:afrilingo/screens/wordmatching.dart';
 import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:afrilingo/services/theme_provider.dart';
 
 class LevelSelectionScreen extends StatelessWidget {
   const LevelSelectionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFFF9F5F1), // Milk white background
+        decoration: BoxDecoration(
+          color: themeProvider.backgroundColor,
         ),
         child: SafeArea(
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 16.0, horizontal: 16.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -26,14 +31,22 @@ class LevelSelectionScreen extends StatelessWidget {
                         Container(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.grey.shade300, width: 2),
+                            border: Border.all(
+                                color: themeProvider.isDarkMode
+                                    ? Colors.grey.shade700
+                                    : Colors.grey.shade300,
+                                width: 2),
                           ),
-                          child: const CircleAvatar(
+                          child: CircleAvatar(
                             radius: 20,
-                            backgroundColor: Colors.white,
+                            backgroundColor: themeProvider.isDarkMode
+                                ? Colors.grey.shade800
+                                : Colors.white,
                             child: Icon(
                               Icons.person,
-                              color: Colors.grey,
+                              color: themeProvider.isDarkMode
+                                  ? Colors.grey.shade300
+                                  : Colors.grey,
                               size: 28,
                             ),
                           ),
@@ -59,19 +72,20 @@ class LevelSelectionScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: themeProvider.cardColor,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.3),
+                            color: Colors.grey.withOpacity(
+                                themeProvider.isDarkMode ? 0.2 : 0.3),
                             spreadRadius: 2,
                             blurRadius: 4,
                           ),
                         ],
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.notifications_rounded,
-                        color: Color(0xFF8B4513),
+                        color: themeProvider.primaryColor,
                         size: 24,
                       ),
                     ),
@@ -87,8 +101,8 @@ class LevelSelectionScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFFC78539), // Light brown
-                      const Color(0xFF8B4513), // Dark brown
+                      themeProvider.secondaryColor, // Light brown
+                      themeProvider.primaryColor, // Dark brown
                     ],
                   ),
                   borderRadius: BorderRadius.circular(25),
@@ -121,12 +135,18 @@ class RwandaFlagCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Container(
       width: 20,
       height: 20,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.grey.shade300, width: 1),
+        border: Border.all(
+            color: themeProvider.isDarkMode
+                ? Colors.grey.shade700
+                : Colors.grey.shade300,
+            width: 1),
       ),
       child: ClipOval(
         child: CustomPaint(
@@ -151,23 +171,27 @@ class RwandaFlagPainter extends CustomPainter {
 
     // Draw blue background for entire circle
     paint.color = blue;
-    canvas.drawCircle(Offset(size.width / 2, size.height / 2), size.width / 2, paint);
+    canvas.drawCircle(
+        Offset(size.width / 2, size.height / 2), size.width / 2, paint);
 
     // Yellow stripe in the middle
     paint.color = yellow;
-    final yellowRect = Rect.fromLTWH(0, size.height * 0.35, size.width, size.height * 0.3);
+    final yellowRect =
+        Rect.fromLTWH(0, size.height * 0.35, size.width, size.height * 0.3);
     canvas.drawRect(yellowRect, paint);
 
     // Green stripe at the bottom
     paint.color = green;
-    final greenRect = Rect.fromLTWH(0, size.height * 0.65, size.width, size.height * 0.35);
+    final greenRect =
+        Rect.fromLTWH(0, size.height * 0.65, size.width, size.height * 0.35);
     canvas.drawRect(greenRect, paint);
 
     // Draw boundary circle to clip the edges
     paint.color = Colors.transparent;
     paint.style = PaintingStyle.stroke;
     paint.strokeWidth = 1;
-    canvas.drawCircle(Offset(size.width / 2, size.height / 2), size.width / 2, paint);
+    canvas.drawCircle(
+        Offset(size.width / 2, size.height / 2), size.width / 2, paint);
   }
 
   @override
@@ -177,11 +201,13 @@ class RwandaFlagPainter extends CustomPainter {
 class CurvedLevelPath extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Stack(
       children: [
         CustomPaint(
           size: Size(double.infinity, 500),
-          painter: CurvedPathPainter(),
+          painter: CurvedPathPainter(themeProvider: themeProvider),
         ),
         Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -191,18 +217,18 @@ class CurvedLevelPath extends StatelessWidget {
               children: [
                 GestureDetector(
                   child: LevelCircle(
-                  level: 1,
-                  isActive: true,
-                  icon: Icons.cases_rounded,
+                    level: 1,
+                    isActive: true,
+                    icon: Icons.cases_rounded,
                   ),
                   onTap: () {
                     Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const WordMatchingScreen()),
-                );
-              },
-            ),
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const WordMatchingScreen()),
+                    );
+                  },
+                ),
               ],
             ),
             Row(
@@ -283,31 +309,35 @@ class LevelCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Container(
       width: 60,
       height: 60,
       decoration: BoxDecoration(
         color: isActive
-            ? Colors.white
-            : Colors.grey.shade400,
+            ? themeProvider.cardColor
+            : themeProvider.isDarkMode
+                ? Colors.grey.shade700
+                : Colors.grey.shade400,
         shape: BoxShape.circle,
         border: isActive
-            ? Border.all(color: const Color(0xFFC78539), width: 4)
+            ? Border.all(color: themeProvider.primaryColor, width: 4)
             : null,
         boxShadow: isActive
             ? [
-          BoxShadow(
-            color: const Color(0xFF8B4513).withOpacity(0.3),
-            blurRadius: 8,
-            spreadRadius: 2,
-          )
-        ]
+                BoxShadow(
+                  color: themeProvider.primaryColor.withOpacity(0.3),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                )
+              ]
             : null,
       ),
       child: Center(
         child: Icon(
           icon,
-          color: isActive ? const Color(0xFF8B4513) : Colors.white,
+          color: isActive ? themeProvider.primaryColor : Colors.white,
           size: 28,
         ),
       ),
@@ -316,16 +346,22 @@ class LevelCircle extends StatelessWidget {
 }
 
 class CurvedPathPainter extends CustomPainter {
+  final ThemeProvider themeProvider;
+
+  CurvedPathPainter({required this.themeProvider});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF8B4513).withOpacity(0.5)
+      ..color = themeProvider.primaryColor
+          .withOpacity(themeProvider.isDarkMode ? 0.3 : 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
 
     final dotPaint = Paint()
-      ..color = const Color(0xFF8B4513).withOpacity(0.5)
+      ..color = themeProvider.primaryColor
+          .withOpacity(themeProvider.isDarkMode ? 0.3 : 0.5)
       ..style = PaintingStyle.fill;
 
     final path = Path();
@@ -366,34 +402,24 @@ class CurvedPathPainter extends CustomPainter {
     path.quadraticBezierTo(level1X, level1Y - curveOffset, level1X, level1Y);
 
     // Curve to level 2
-    path.quadraticBezierTo(
-        centerX + curveOffset, level1Y + (level2Y - level1Y) / 2,
-        level2X, level2Y
-    );
+    path.quadraticBezierTo(centerX + curveOffset,
+        level1Y + (level2Y - level1Y) / 2, level2X, level2Y);
 
     // Curve to level 3
-    path.quadraticBezierTo(
-        level2X - curveOffset, level2Y + (level3Y - level2Y) / 2,
-        level3X, level3Y
-    );
+    path.quadraticBezierTo(level2X - curveOffset,
+        level2Y + (level3Y - level2Y) / 2, level3X, level3Y);
 
     // Curve to level 4
-    path.quadraticBezierTo(
-        centerX + curveOffset, level3Y + (level4Y - level3Y) / 2,
-        level4X, level4Y
-    );
+    path.quadraticBezierTo(centerX + curveOffset,
+        level3Y + (level4Y - level3Y) / 2, level4X, level4Y);
 
     // Curve to level 5
-    path.quadraticBezierTo(
-        level4X - curveOffset, level4Y + (level5Y - level4Y) / 2,
-        level5X, level5Y
-    );
+    path.quadraticBezierTo(level4X - curveOffset,
+        level4Y + (level5Y - level4Y) / 2, level5X, level5Y);
 
     // Curve to level 6
-    path.quadraticBezierTo(
-        centerX + curveOffset, level5Y + (level6Y - level5Y) / 2,
-        level6X, level6Y
-    );
+    path.quadraticBezierTo(centerX + curveOffset,
+        level5Y + (level6Y - level5Y) / 2, level6X, level6Y);
 
     canvas.drawPath(path, paint);
 
@@ -414,8 +440,12 @@ class CurvedPathPainter extends CustomPainter {
       final controlX = centerX + curveOffset;
       final controlY = level1Y + (level2Y - level1Y) / 2;
 
-      final x = (1 - t) * (1 - t) * level1X + 2 * (1 - t) * t * controlX + t * t * level2X;
-      final y = (1 - t) * (1 - t) * level1Y + 2 * (1 - t) * t * controlY + t * t * level2Y;
+      final x = (1 - t) * (1 - t) * level1X +
+          2 * (1 - t) * t * controlX +
+          t * t * level2X;
+      final y = (1 - t) * (1 - t) * level1Y +
+          2 * (1 - t) * t * controlY +
+          t * t * level2Y;
 
       canvas.drawCircle(Offset(x, y), 3, dotPaint);
     }
@@ -426,8 +456,12 @@ class CurvedPathPainter extends CustomPainter {
       final controlX = level2X - curveOffset;
       final controlY = level2Y + (level3Y - level2Y) / 2;
 
-      final x = (1 - t) * (1 - t) * level2X + 2 * (1 - t) * t * controlX + t * t * level3X;
-      final y = (1 - t) * (1 - t) * level2Y + 2 * (1 - t) * t * controlY + t * t * level3Y;
+      final x = (1 - t) * (1 - t) * level2X +
+          2 * (1 - t) * t * controlX +
+          t * t * level3X;
+      final y = (1 - t) * (1 - t) * level2Y +
+          2 * (1 - t) * t * controlY +
+          t * t * level3Y;
 
       canvas.drawCircle(Offset(x, y), 3, dotPaint);
     }
@@ -438,8 +472,12 @@ class CurvedPathPainter extends CustomPainter {
       final controlX = centerX + curveOffset;
       final controlY = level3Y + (level4Y - level3Y) / 2;
 
-      final x = (1 - t) * (1 - t) * level3X + 2 * (1 - t) * t * controlX + t * t * level4X;
-      final y = (1 - t) * (1 - t) * level3Y + 2 * (1 - t) * t * controlY + t * t * level4Y;
+      final x = (1 - t) * (1 - t) * level3X +
+          2 * (1 - t) * t * controlX +
+          t * t * level4X;
+      final y = (1 - t) * (1 - t) * level3Y +
+          2 * (1 - t) * t * controlY +
+          t * t * level4Y;
 
       canvas.drawCircle(Offset(x, y), 3, dotPaint);
     }
@@ -450,8 +488,12 @@ class CurvedPathPainter extends CustomPainter {
       final controlX = level4X - curveOffset;
       final controlY = level4Y + (level5Y - level4Y) / 2;
 
-      final x = (1 - t) * (1 - t) * level4X + 2 * (1 - t) * t * controlX + t * t * level5X;
-      final y = (1 - t) * (1 - t) * level4Y + 2 * (1 - t) * t * controlY + t * t * level5Y;
+      final x = (1 - t) * (1 - t) * level4X +
+          2 * (1 - t) * t * controlX +
+          t * t * level5X;
+      final y = (1 - t) * (1 - t) * level4Y +
+          2 * (1 - t) * t * controlY +
+          t * t * level5Y;
 
       canvas.drawCircle(Offset(x, y), 3, dotPaint);
     }

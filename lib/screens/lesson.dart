@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:afrilingo/services/theme_provider.dart';
 import '../models/course.dart';
 import '../models/lesson.dart';
 import '../services/lesson_service.dart';
@@ -111,16 +113,19 @@ class _LessonScreenState extends State<LessonScreen> {
   @override
   Widget build(BuildContext context) {
     final currentLesson = widget.lessons[_currentLessonIndex];
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
+      backgroundColor: themeProvider.backgroundColor,
       appBar: AppBar(
         title: Text(currentLesson.title),
-        backgroundColor: const Color(0xFF8B4513),
+        backgroundColor: themeProvider.primaryColor,
         foregroundColor: Colors.white,
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF8B4513)))
+          ? Center(
+              child:
+                  CircularProgressIndicator(color: themeProvider.primaryColor))
           : _error != null
               ? Center(
                   child: Column(
@@ -131,7 +136,7 @@ class _LessonScreenState extends State<LessonScreen> {
                       ElevatedButton(
                         onPressed: _loadCurrentLessonContent,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF8B4513),
+                          backgroundColor: themeProvider.primaryColor,
                           foregroundColor: Colors.white,
                         ),
                         child: const Text('Retry'),
@@ -157,10 +162,11 @@ class _LessonScreenState extends State<LessonScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: themeProvider.cardColor,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withOpacity(
+                                themeProvider.isDarkMode ? 0.2 : 0.05),
                             blurRadius: 8,
                             offset: const Offset(0, -4),
                           ),
@@ -174,15 +180,15 @@ class _LessonScreenState extends State<LessonScreen> {
                                 ? _previousLesson
                                 : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF8B4513),
+                              backgroundColor: themeProvider.cardColor,
+                              foregroundColor: themeProvider.primaryColor,
                               disabledForegroundColor:
                                   Colors.grey.withOpacity(0.5),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 side: BorderSide(
                                   color: _currentLessonIndex > 0
-                                      ? const Color(0xFF8B4513)
+                                      ? themeProvider.primaryColor
                                       : Colors.grey.withOpacity(0.5),
                                 ),
                               ),
@@ -192,7 +198,7 @@ class _LessonScreenState extends State<LessonScreen> {
                           ElevatedButton(
                             onPressed: _startQuiz,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF8B4513),
+                              backgroundColor: themeProvider.primaryColor,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 24, vertical: 12),
@@ -208,8 +214,8 @@ class _LessonScreenState extends State<LessonScreen> {
                                     ? _nextLesson
                                     : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF8B4513),
+                              backgroundColor: themeProvider.cardColor,
+                              foregroundColor: themeProvider.primaryColor,
                               disabledForegroundColor:
                                   Colors.grey.withOpacity(0.5),
                               shape: RoundedRectangleBorder(
@@ -217,7 +223,7 @@ class _LessonScreenState extends State<LessonScreen> {
                                 side: BorderSide(
                                   color: _currentLessonIndex <
                                           widget.lessons.length - 1
-                                      ? const Color(0xFF8B4513)
+                                      ? themeProvider.primaryColor
                                       : Colors.grey.withOpacity(0.5),
                                 ),
                               ),

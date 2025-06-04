@@ -5,10 +5,12 @@ import 'package:afrilingo/models/course.dart';
 import 'package:afrilingo/models/lesson.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:afrilingo/services/theme_provider.dart';
 import '../lesson.dart';
 import 'notifications.dart';
 
-// African-inspired color palette
+// Keeping these as fallback colors
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
 const Color kSecondaryColor = Color(0xFFC78539); // Light brown
 const Color kAccentColor = Color(0xFF546CC3); // Blue accent
@@ -68,15 +70,15 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
       setState(() {
         _isLoading = true;
       });
-      
+
       final lessons = await _lessonService.getLessonsByCourseId(course.id);
-      
+
       setState(() {
         _isLoading = false;
       });
-      
+
       if (!mounted) return;
-      
+
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -90,7 +92,7 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
       setState(() {
         _isLoading = false;
       });
-      
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -109,16 +111,20 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: themeProvider.backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
-        title: const Text(
+        systemOverlayStyle: themeProvider.isDarkMode
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        title: Text(
           'Kinyarwanda Courses',
           style: TextStyle(
-            color: kTextColor,
+            color: themeProvider.textColor,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
@@ -126,29 +132,32 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none_outlined, color: kTextColor),
+            icon: Icon(Icons.notifications_none_outlined,
+                color: themeProvider.textColor),
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const NotificationsScreen()),
               );
             },
           ),
         ],
       ),
       body: SafeArea(
-            child: Column(
-              children: [
+        child: Column(
+          children: [
             // Custom TabBar
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               height: 52,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: themeProvider.cardColor,
                 borderRadius: BorderRadius.circular(26),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black
+                        .withOpacity(themeProvider.isDarkMode ? 0.2 : 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -158,10 +167,10 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                 controller: _tabController,
                 indicator: BoxDecoration(
                   borderRadius: BorderRadius.circular(26),
-                  color: kPrimaryColor,
+                  color: themeProvider.primaryColor,
                 ),
                 labelColor: Colors.white,
-                unselectedLabelColor: kLightTextColor,
+                unselectedLabelColor: themeProvider.lightTextColor,
                 labelStyle: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
@@ -176,20 +185,20 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                 ],
               ),
             ),
-            
+
             // Tab content
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      // "Course Review" content
-                      _buildCourseReviewTab(),
-                      // "Categories" content
-                      _buildCategoriesTab(),
-                    ],
-                  ),
-                ),
-              ],
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // "Course Review" content
+                  _buildCourseReviewTab(),
+                  // "Categories" content
+                  _buildCategoriesTab(),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
       // Bottom Navigation Bar
@@ -199,20 +208,23 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
 
   /// "Course Review" tab content: displays clickable chapter tiles.
   Widget _buildCourseReviewTab() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     if (_isLoading) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(kPrimaryColor),
+              valueColor:
+                  AlwaysStoppedAnimation<Color>(themeProvider.primaryColor),
               strokeWidth: 3,
             ),
             const SizedBox(height: 16),
             Text(
               'Loading courses...',
               style: TextStyle(
-                color: kLightTextColor,
+                color: themeProvider.lightTextColor,
                 fontSize: 16,
               ),
             ),
@@ -237,7 +249,7 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
-                color: kTextColor,
+                color: themeProvider.textColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -252,9 +264,10 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimaryColor,
+                backgroundColor: themeProvider.primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -273,14 +286,16 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
             Icon(
               Icons.school_outlined,
               size: 80,
-              color: Colors.grey.shade300,
+              color: themeProvider.isDarkMode
+                  ? Colors.grey.shade700
+                  : Colors.grey.shade300,
             ),
             const SizedBox(height: 16),
             Text(
               'No courses available yet',
               style: TextStyle(
                 fontSize: 18,
-                color: kLightTextColor,
+                color: themeProvider.lightTextColor,
               ),
             ),
           ],
@@ -290,7 +305,7 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
 
     return RefreshIndicator(
       onRefresh: _loadCourses,
-      color: kPrimaryColor,
+      color: themeProvider.primaryColor,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: _courses.length,
@@ -305,7 +320,7 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
             const Color(0xFFE8EAF6), // light indigo
           ];
           final color = colors[index % colors.length];
-          
+
           return _buildCourseCard(
             course: course,
             color: color,
@@ -317,10 +332,12 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
   }
 
   Widget _buildCourseCard({
-    required Course course, 
+    required Course course,
     required Color color,
     required int index,
   }) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
@@ -328,24 +345,27 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
         borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(
-            color: kCardColor,
+            color: themeProvider.cardColor,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black
+                    .withOpacity(themeProvider.isDarkMode ? 0.2 : 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-      child: Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+            children: [
               // Course header with background color
               Container(
                 height: 120,
                 decoration: BoxDecoration(
-                  color: color,
+                  color: themeProvider.isDarkMode
+                      ? color.withOpacity(0.5) // Darken the colors in dark mode
+                      : color,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
@@ -363,7 +383,8 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                         height: 100,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.school, size: 80, color: kPrimaryColor);
+                          return Icon(Icons.school,
+                              size: 80, color: themeProvider.primaryColor);
                         },
                       ),
                     ),
@@ -372,7 +393,8 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                       left: 16,
                       top: 16,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.9),
                           borderRadius: BorderRadius.circular(16),
@@ -382,37 +404,38 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
-                            color: kPrimaryColor,
+                            color: themeProvider.primaryColor,
                           ),
                         ),
                       ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-              
+              ),
+
               // Course content
-          Padding(
+              Padding(
                 padding: const EdgeInsets.all(16),
-            child: Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Course title
                     Text(
                       course.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: kTextColor,
+                        color: themeProvider.textColor,
                       ),
                     ),
                     const SizedBox(height: 8),
                     // Course description
                     Text(
-                      course.description ?? 'Learn key vocabulary and phrases for everyday conversations.',
+                      course.description ??
+                          'Learn key vocabulary and phrases for everyday conversations.',
                       style: TextStyle(
                         fontSize: 14,
-                        color: kLightTextColor,
+                        color: themeProvider.lightTextColor,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -420,7 +443,7 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                     const SizedBox(height: 16),
                     // Course details
                     Row(
-              children: [
+                      children: [
                         _buildCourseDetailItem(
                           icon: Icons.access_time,
                           text: '${10 + index * 5} lessons',
@@ -439,7 +462,7 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                       child: ElevatedButton(
                         onPressed: () => _navigateToLessons(course),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimaryColor,
+                          backgroundColor: themeProvider.primaryColor,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -454,31 +477,34 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                           ),
                         ),
                       ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
         ),
       ),
     );
   }
 
-  Widget _buildCourseDetailItem({required IconData icon, required String text}) {
+  Widget _buildCourseDetailItem(
+      {required IconData icon, required String text}) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Row(
       children: [
         Icon(
           icon,
           size: 16,
-          color: kLightTextColor,
+          color: themeProvider.lightTextColor,
         ),
         const SizedBox(width: 4),
         Text(
           text,
           style: TextStyle(
             fontSize: 14,
-            color: kLightTextColor,
+            color: themeProvider.lightTextColor,
           ),
         ),
       ],
@@ -487,6 +513,8 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
 
   /// "Categories" tab content: displays a clickable search bar and category items.
   Widget _buildCategoriesTab() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     // Categories list
     final categories = [
       {
@@ -532,20 +560,21 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
         'color': Colors.indigo,
       },
     ];
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-        child: Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        children: [
           // Search bar
           Container(
             decoration: BoxDecoration(
-              color: kCardColor,
+              color: themeProvider.cardColor,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black
+                      .withOpacity(themeProvider.isDarkMode ? 0.2 : 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -554,34 +583,37 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
             child: TextField(
               decoration: InputDecoration(
                 hintText: 'Search for categories...',
-                hintStyle: TextStyle(color: kLightTextColor),
-                prefixIcon: Icon(Icons.search, color: kLightTextColor),
+                hintStyle: TextStyle(color: themeProvider.lightTextColor),
+                prefixIcon:
+                    Icon(Icons.search, color: themeProvider.lightTextColor),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
+              style: TextStyle(color: themeProvider.textColor),
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Categories section title
-          const Text(
+          Text(
             'Learning Categories',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: kTextColor,
+              color: themeProvider.textColor,
             ),
           ),
           const SizedBox(height: 8),
-              Text(
+          Text(
             'Explore these categories to master Kinyarwanda',
             style: TextStyle(
               fontSize: 14,
-              color: kLightTextColor,
+              color: themeProvider.lightTextColor,
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Categories list
           ListView.builder(
             shrinkWrap: true,
@@ -598,21 +630,24 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
             },
           ),
         ],
-    ),
-  );
-}
+      ),
+    );
+  }
 
-/// Builds a clickable category item (for the Categories tab).
+  /// Builds a clickable category item (for the Categories tab).
   Widget _buildCategoryItem({
     required String title,
     required String description,
     required IconData icon,
     required Color color,
   }) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
         elevation: 0,
+        color: themeProvider.cardColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -627,7 +662,8 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color:
+                        color.withOpacity(themeProvider.isDarkMode ? 0.2 : 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, color: color),
@@ -637,13 +673,13 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: kTextColor,
+                          color: themeProvider.textColor,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -651,7 +687,7 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                         description,
                         style: TextStyle(
                           fontSize: 14,
-                          color: kLightTextColor,
+                          color: themeProvider.lightTextColor,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -660,9 +696,9 @@ class _CoursesState extends State<Courses> with SingleTickerProviderStateMixin {
                   ),
                 ),
                 // Arrow icon
-                const Icon(
+                Icon(
                   Icons.chevron_right,
-                  color: kLightTextColor,
+                  color: themeProvider.lightTextColor,
                 ),
               ],
             ),

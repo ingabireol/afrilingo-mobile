@@ -7,8 +7,11 @@ import 'package:afrilingo/utils/profile_image_helper.dart';
 import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:afrilingo/services/theme_provider.dart';
+import 'package:afrilingo/screens/auth/sign_in_screen.dart';
 
-// African-inspired color palette
+// Keep these as fallback colors
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
 const Color kSecondaryColor = Color(0xFFC78539); // Light brown
 const Color kAccentColor = Color(0xFF546CC3); // Blue accent
@@ -210,9 +213,9 @@ class _ProfilePageState extends State<ProfilePage> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Profile updated successfully!'),
-          backgroundColor: kPrimaryColor,
+          backgroundColor: Theme.of(context).primaryColor,
         ),
       );
     } catch (e) {
@@ -231,25 +234,29 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: themeProvider.backgroundColor,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        title: const Text(
+        title: Text(
           'My Profile',
           style: TextStyle(
-            color: kTextColor,
+            color: themeProvider.textColor,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
+        systemOverlayStyle: themeProvider.isDarkMode
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.logout_rounded,
-              color: kTextColor,
+              color: themeProvider.textColor,
             ),
             tooltip: 'Logout',
             onPressed: () {
@@ -260,8 +267,9 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: kPrimaryColor))
+            ? Center(
+                child: CircularProgressIndicator(
+                    color: themeProvider.primaryColor))
             : _error != null
                 ? Center(
                     child: Column(
@@ -279,7 +287,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ElevatedButton(
                           onPressed: _fetchProfile,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: kPrimaryColor,
+                            backgroundColor: themeProvider.primaryColor,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -298,9 +306,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildProfileContent(BuildContext context) {
     final profile = _profile!;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return RefreshIndicator(
       onRefresh: _fetchProfile,
-      color: kPrimaryColor,
+      color: themeProvider.primaryColor,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
@@ -308,13 +318,21 @@ class _ProfilePageState extends State<ProfilePage> {
             // Profile header with avatar
             Container(
               width: double.infinity,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [kPrimaryColor, kSecondaryColor],
+                  colors: themeProvider.isDarkMode
+                      ? [
+                          themeProvider.primaryColor.withOpacity(0.8),
+                          themeProvider.secondaryColor.withOpacity(0.6)
+                        ]
+                      : [
+                          themeProvider.primaryColor,
+                          themeProvider.secondaryColor
+                        ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.only(
+                borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(32),
                   bottomRight: Radius.circular(32),
                 ),
@@ -358,8 +376,8 @@ class _ProfilePageState extends State<ProfilePage> {
                             child: Container(
                               width: 32,
                               height: 32,
-                              decoration: const BoxDecoration(
-                                color: kAccentColor,
+                              decoration: BoxDecoration(
+                                color: themeProvider.accentColor,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
@@ -430,8 +448,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: ElevatedButton(
                       onPressed: _isSavingProfile ? null : _saveProfile,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kPrimaryColor,
-                        disabledBackgroundColor: kPrimaryColor.withOpacity(0.5),
+                        backgroundColor: themeProvider.primaryColor,
+                        disabledBackgroundColor:
+                            themeProvider.primaryColor.withOpacity(0.5),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -468,6 +487,8 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildProgressCard() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return FutureBuilder<Map<String, dynamic>>(
       future: ProfileService(
         baseUrl: 'http://10.0.2.2:8080/api/v1',
@@ -509,6 +530,7 @@ class _ProfilePageState extends State<ProfilePage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
+          color: themeProvider.cardColor,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -517,20 +539,20 @@ class _ProfilePageState extends State<ProfilePage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Learning Progress',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: kTextColor,
+                        color: themeProvider.textColor,
                       ),
                     ),
                     Text(
                       '${(progress * 100).toInt()}%',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: kPrimaryColor,
+                        color: themeProvider.primaryColor,
                       ),
                     ),
                   ],
@@ -541,22 +563,24 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 12,
-                    backgroundColor: Colors.grey.shade200,
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(kPrimaryColor),
+                    backgroundColor: themeProvider.isDarkMode
+                        ? Colors.grey.shade800
+                        : Colors.grey.shade200,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        themeProvider.primaryColor),
                   ),
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.auto_stories,
-                        color: kSecondaryColor, size: 20),
+                    Icon(Icons.auto_stories,
+                        color: themeProvider.secondaryColor, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       'You completed $completedLessons ${completedLessons == 1 ? 'Chapter' : 'Chapters'}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: kLightTextColor,
+                        color: themeProvider.lightTextColor,
                       ),
                     ),
                     const Spacer(),
@@ -565,7 +589,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         // Navigate to progress details
                       },
                       style: TextButton.styleFrom(
-                        foregroundColor: kAccentColor,
+                        foregroundColor: themeProvider.accentColor,
                       ),
                       child: const Text('Details'),
                     ),
@@ -580,33 +604,36 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildPersonalInfoCard() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Card(
       elevation: 4,
       shadowColor: Colors.black.withOpacity(0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
       ),
+      color: themeProvider.cardColor,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Personal Information',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: kTextColor,
+                color: themeProvider.textColor,
               ),
             ),
             const SizedBox(height: 20),
 
             // Username (Email) - Read-only
-            const Text(
+            Text(
               'Username/Email',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
-                color: kLightTextColor,
+                color: themeProvider.lightTextColor,
                 fontSize: 14,
               ),
             ),
@@ -616,25 +643,28 @@ class _ProfilePageState extends State<ProfilePage> {
               readOnly: true,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.grey.shade100,
+                fillColor: themeProvider.isDarkMode
+                    ? Colors.black12
+                    : Colors.grey.shade100,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                suffixIcon:
-                    const Icon(Icons.lock_outline, color: kLightTextColor),
+                suffixIcon: Icon(Icons.lock_outline,
+                    color: themeProvider.lightTextColor),
               ),
+              style: TextStyle(color: themeProvider.textColor),
             ),
             const SizedBox(height: 16),
 
             // First Name
-            const Text(
+            Text(
               'First Name',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
-                color: kLightTextColor,
+                color: themeProvider.lightTextColor,
                 fontSize: 14,
               ),
             ),
@@ -643,24 +673,27 @@ class _ProfilePageState extends State<ProfilePage> {
               controller: _firstNameController,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: themeProvider.isDarkMode
+                    ? themeProvider.surfaceColor
+                    : Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: kDividerColor),
+                  borderSide: BorderSide(color: themeProvider.dividerColor),
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 hintText: 'Enter your first name',
               ),
+              style: TextStyle(color: themeProvider.textColor),
             ),
             const SizedBox(height: 16),
 
             // Last Name
-            const Text(
+            Text(
               'Last Name',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
-                color: kLightTextColor,
+                color: themeProvider.lightTextColor,
                 fontSize: 14,
               ),
             ),
@@ -669,24 +702,27 @@ class _ProfilePageState extends State<ProfilePage> {
               controller: _lastNameController,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: themeProvider.isDarkMode
+                    ? themeProvider.surfaceColor
+                    : Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: kDividerColor),
+                  borderSide: BorderSide(color: themeProvider.dividerColor),
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 hintText: 'Enter your last name',
               ),
+              style: TextStyle(color: themeProvider.textColor),
             ),
             const SizedBox(height: 16),
 
             // First Language
-            const Text(
+            Text(
               'First Language',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
-                color: kLightTextColor,
+                color: themeProvider.lightTextColor,
                 fontSize: 14,
               ),
             ),
@@ -695,15 +731,18 @@ class _ProfilePageState extends State<ProfilePage> {
               controller: _firstLanguageController,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: themeProvider.isDarkMode
+                    ? themeProvider.surfaceColor
+                    : Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: kDividerColor),
+                  borderSide: BorderSide(color: themeProvider.dividerColor),
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 hintText: 'Enter your first language',
               ),
+              style: TextStyle(color: themeProvider.textColor),
             ),
           ],
         ),
@@ -712,6 +751,8 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildAchievementsCard(UserProfile profile) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return FutureBuilder<int>(
       future: ProfileService(
         baseUrl: 'http://10.0.2.2:8080/api/v1',
@@ -740,17 +781,18 @@ class _ProfilePageState extends State<ProfilePage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
+          color: themeProvider.cardColor,
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Achievements',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: kTextColor,
+                    color: themeProvider.textColor,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -774,19 +816,20 @@ class _ProfilePageState extends State<ProfilePage> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Daily Streak',
                           style: TextStyle(
                             fontWeight: FontWeight.w500,
-                            color: kLightTextColor,
+                            color: themeProvider.lightTextColor,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '$streak ${streak == 1 ? 'day' : 'days'}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            color: themeProvider.textColor,
                           ),
                         ),
                       ],
@@ -795,7 +838,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
 
                 const SizedBox(height: 16),
-                const Divider(height: 1, color: kDividerColor),
+                Divider(height: 1, color: themeProvider.dividerColor),
                 const SizedBox(height: 16),
 
                 // Points
@@ -817,11 +860,11 @@ class _ProfilePageState extends State<ProfilePage> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Total Points',
                           style: TextStyle(
                             fontWeight: FontWeight.w500,
-                            color: kLightTextColor,
+                            color: themeProvider.lightTextColor,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -866,9 +909,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
                             return Text(
                               '$points points',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
+                                color: themeProvider.textColor,
                               ),
                             );
                           },
@@ -883,7 +927,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       icon: const Icon(Icons.arrow_forward, size: 16),
                       label: const Text('View All'),
                       style: TextButton.styleFrom(
-                        foregroundColor: kAccentColor,
+                        foregroundColor: themeProvider.accentColor,
                       ),
                     ),
                   ],
@@ -898,31 +942,34 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // Add a method to show logout confirmation dialog
   Future<void> _showLogoutConfirmationDialog(BuildContext context) async {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: themeProvider.cardColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          title: const Text(
+          title: Text(
             'Logout',
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: kTextColor,
+              color: themeProvider.textColor,
             ),
           ),
-          content: const Text(
+          content: Text(
             'Are you sure you want to logout?',
             style: TextStyle(
-              color: kLightTextColor,
+              color: themeProvider.lightTextColor,
             ),
           ),
           actions: <Widget>[
             TextButton(
               style: TextButton.styleFrom(
-                foregroundColor: kLightTextColor,
+                foregroundColor: themeProvider.lightTextColor,
               ),
               child: const Text('Cancel'),
               onPressed: () {
@@ -931,7 +978,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: kPrimaryColor,
+                backgroundColor: themeProvider.primaryColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -942,10 +989,19 @@ class _ProfilePageState extends State<ProfilePage> {
                 // Clear user data
                 await UserCacheService.clearCache();
 
+                // Clear SharedPreferences auth data
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.remove('auth_token');
+                await prefs.remove('user_id');
+
                 // Navigate to login page and clear navigation history
                 if (context.mounted) {
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                    '/login', // Replace with your login route
+                  // Use MaterialPageRoute instead of named route for more reliability
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const SignInScreen(), // Import this at the top
+                    ),
                     (route) => false,
                   );
                 }

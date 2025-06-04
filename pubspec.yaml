@@ -19,6 +19,7 @@ dependencies:
   image_picker: ^1.0.7
   percent_indicator: ^4.2.3 
   dart_openai: ^5.1.0
+  animated_text_kit: ^4.2.2
   # Added percent_indicator package
   # Add other dependencies here
 

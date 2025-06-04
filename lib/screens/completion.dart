@@ -1,23 +1,33 @@
 import 'package:afrilingo/screens/levelselection.dart';
 import 'package:afrilingo/widgets/auth/navigation_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:afrilingo/services/theme_provider.dart';
 
 class CompletionScreen extends StatelessWidget {
   const CompletionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFC78539), // Light brown
-              Color(0xFF532708), // Dark brown
-              Color(0xFF2D1505), // Even darker brown
-            ],
+            colors: themeProvider.isDarkMode
+                ? [
+                    themeProvider.secondaryColor.withOpacity(0.8),
+                    themeProvider.primaryColor,
+                    themeProvider.primaryColor.withOpacity(0.7),
+                  ]
+                : [
+                    const Color(0xFFC78539), // Light brown
+                    const Color(0xFF532708), // Dark brown
+                    const Color(0xFF2D1505), // Even darker brown
+                  ],
           ),
         ),
         child: SafeArea(
@@ -45,8 +55,8 @@ class CompletionScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              const Color(0xFFC78539).withOpacity(0.3),
-                              const Color(0xFF532708).withOpacity(0.3),
+                              themeProvider.secondaryColor.withOpacity(0.3),
+                              themeProvider.primaryColor.withOpacity(0.3),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(25),
@@ -100,8 +110,10 @@ class CompletionScreen extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const LevelSelectionScreen()),
-);
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    const LevelSelectionScreen()),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
@@ -110,10 +122,10 @@ class CompletionScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(24),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Continue',
                           style: TextStyle(
-                            color: Color(0xFF532708),
+                            color: themeProvider.primaryColor,
                             fontSize: 16,
                           ),
                         ),

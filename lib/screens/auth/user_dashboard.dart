@@ -8,6 +8,8 @@ import 'package:afrilingo/models/user_profile.dart';
 import 'package:afrilingo/services/user_cache_service.dart';
 import 'package:afrilingo/utils/profile_image_helper.dart';
 import 'package:afrilingo/services/lesson_service.dart';
+import 'package:provider/provider.dart';
+import 'package:afrilingo/services/theme_provider.dart';
 
 import '../../widgets/auth/navigation_bar.dart';
 import 'activity.dart';
@@ -16,6 +18,7 @@ import 'package:afrilingo/screens/chatbotScreenState.dart';
 import '../language_selection_screen.dart';
 import '../../services/profile_service.dart';
 import '../../screens/translating.dart';
+import 'package:afrilingo/screens/auth/sign_in_screen.dart';
 
 // African-inspired color palette
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
@@ -34,12 +37,15 @@ class UserDashboard extends StatefulWidget {
   _UserDashboardState createState() => _UserDashboardState();
 }
 
-class _UserDashboardState extends State<UserDashboard> {
+class _UserDashboardState extends State<UserDashboard>
+    with SingleTickerProviderStateMixin {
   UserProfile? _profile;
   bool _isLoadingProfile = false;
   String _cachedFirstName = '';
   String? _cachedEmail;
   String? _cachedProfilePicture;
+  late AnimationController _animationController;
+  late Animation<double> _fadeInAnimation;
 
   // Dashboard data
   Map<String, dynamic>? _dashboardData;
@@ -54,14 +60,34 @@ class _UserDashboardState extends State<UserDashboard> {
   @override
   void initState() {
     super.initState();
+    // Initialize animation controller
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOut,
+      ),
+    );
+
     _initializeServices();
     _loadCachedUserInfo();
     _loadUserProfile();
     _loadDashboardData();
-    _loadStreakData(); // Add dedicated streak loading
-
-    // Log info about completed lessons
+    _loadStreakData();
     _logCompletedLessonsInfo();
+
+    // Start the animation
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   void _initializeServices() {
@@ -461,227 +487,244 @@ class _UserDashboardState extends State<UserDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: themeProvider.backgroundColor,
       appBar: AppBar(
-        elevation: 0,
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
-        title: const Text(
-          'Afrilingo',
-          style: TextStyle(
-            color: kPrimaryColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 24,
-          ),
+        elevation: 0,
+        systemOverlayStyle: themeProvider.isDarkMode
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        centerTitle: true,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.translate,
+              color: themeProvider.primaryColor,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'AfriLingo',
+              style: TextStyle(
+                color: themeProvider.textColor,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'DM Serif Display',
+                fontSize: 22,
+              ),
+            ),
+          ],
         ),
-        systemOverlayStyle: SystemUiOverlayStyle.dark,
         actions: [
-          // Add a refresh button
           IconButton(
-            icon: const Icon(Icons.refresh, color: kTextColor),
-            onPressed: _refreshData,
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded,
-                color: kTextColor, size: 28),
+            icon: Icon(
+              Icons.notifications_none_outlined,
+              color: themeProvider.textColor,
+            ),
+            tooltip: 'Notifications',
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => const NotificationsScreen()),
+                  builder: (context) => const NotificationsScreen(),
+                ),
               );
             },
           ),
-          const SizedBox(width: 8),
+          IconButton(
+            icon: Icon(
+              themeProvider.isDarkMode
+                  ? Icons.light_mode_outlined
+                  : Icons.dark_mode_outlined,
+              color: themeProvider.textColor,
+            ),
+            tooltip: themeProvider.isDarkMode ? 'Light Mode' : 'Dark Mode',
+            onPressed: () {
+              themeProvider.toggleTheme();
+            },
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.logout_rounded,
+              color: themeProvider.textColor,
+            ),
+            tooltip: 'Logout',
+            onPressed: () {
+              _showLogoutConfirmationDialog(context);
+            },
+          ),
         ],
       ),
-      body: SafeArea(
-        child: _buildProfileContent(context),
+      body: FadeTransition(
+        opacity: _fadeInAnimation,
+        child: RefreshIndicator(
+          color: themeProvider.primaryColor,
+          onRefresh: _refreshData,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // User welcome card
+                  _buildWelcomeCard(themeProvider),
+                  const SizedBox(height: 24),
+
+                  // Progress section
+                  _buildProgressSection(themeProvider),
+                  const SizedBox(height: 24),
+
+                  // Course section
+                  _buildCourseSection(themeProvider),
+                  const SizedBox(height: 24),
+
+                  // Features section
+                  _buildFeaturesSection(themeProvider),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
       bottomNavigationBar: const CustomBottomNavigationBar(selectedIndex: 0),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildWelcomeCard(ThemeProvider themeProvider) {
     // Use the actual firstName that was loaded from the backend
     // Avoid hardcoding "Guest" as a fallback value
-    String displayText = _formatDisplayName(_cachedFirstName, "");
-
-    print('Dashboard: Building header with name: $displayText');
+    final String displayName =
+        _cachedFirstName.isEmpty ? 'User' : _cachedFirstName;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      width: double.infinity,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [kPrimaryColor, kSecondaryColor],
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          colors: themeProvider.isDarkMode
+              ? [
+                  themeProvider.primaryColor.withOpacity(0.8),
+                  themeProvider.primaryColor.withOpacity(0.6),
+                ]
+              : [
+                  themeProvider.primaryColor,
+                  themeProvider.secondaryColor,
+                ],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: themeProvider.primaryColor.withOpacity(0.3),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            // Profile circle with initial
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              child: Text(
+                displayName.isNotEmpty ? displayName[0].toUpperCase() : 'A',
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
-            child: _isLoadingProfile
-                ? ProfileImageHelper.buildProfileAvatar(
-                    imageUrl: _cachedProfilePicture,
-                    showLoading: true,
-                  )
-                : ProfileImageHelper.buildProfileAvatar(
-                    imageUrl: _cachedProfilePicture,
-                    radius: 30,
-                  ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome back,',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  displayText.isNotEmpty ? displayText : "Welcome",
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-                if (_cachedEmail != null && _cachedEmail!.isNotEmpty)
+            const SizedBox(width: 16),
+
+            // Welcome text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    _cachedEmail!,
+                    'Welcome back,',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 16,
+                      color: Colors.white.withOpacity(0.9),
                     ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
                   ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.star, color: Colors.amber, size: 18),
-                const SizedBox(width: 4),
-                const Text(
-                  '1,240',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: kTextColor,
+                  Text(
+                    displayName,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Points',
-                  style: TextStyle(
-                    color: kTextColor.withOpacity(0.6),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+                  if (_cachedEmail != null && _cachedEmail!.isNotEmpty)
+                    Text(
+                      _cachedEmail!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  // Helper method to format display name consistently
-  String _formatDisplayName(String firstName, String? lastName) {
-    final trimmedFirst = firstName.trim();
-
-    // Check if the firstName appears to contain multiple names (which may be the issue)
-    if (trimmedFirst.contains(" ")) {
-      // Use only the first part of the name to avoid redundancy
-      return trimmedFirst.split(" ")[0];
-    }
-
-    return trimmedFirst;
-  }
-
-  Widget _buildProfileContent(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: _refreshData,
-      color: kPrimaryColor,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 24),
-              _buildHeader(context),
-              const SizedBox(height: 32),
-
-              // Progress Section
-              _buildProgressSection(),
-              const SizedBox(height: 32),
-
-              // Menu Grid
-              _buildMenuGrid(context),
-              const SizedBox(height: 32),
-
-              // Stats Section
-              _buildStatsSection(),
-              const SizedBox(height: 32),
-
-              // Debug info for development (remove in production)
-              _buildDebugInfo(),
-              const SizedBox(height: 32),
-            ],
-          ),
+            // Points display
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.star,
+                    color: Color(0xFFFFD700), // Gold color
+                    size: 20,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${_dashboardData?['points'] ?? 0} Points',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildProgressSection() {
+  Widget _buildProgressSection(ThemeProvider themeProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Your Progress',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: kTextColor,
+                color: themeProvider.textColor,
               ),
             ),
             TextButton(
@@ -689,13 +732,14 @@ class _UserDashboardState extends State<UserDashboard> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const ProgressScreen()),
+                    builder: (context) => const ProgressScreen(),
+                  ),
                 );
               },
-              child: const Text(
+              child: Text(
                 'View All',
                 style: TextStyle(
-                  color: kAccentColor,
+                  color: themeProvider.accentColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -703,112 +747,303 @@ class _UserDashboardState extends State<UserDashboard> {
           ],
         ),
         const SizedBox(height: 16),
+
+        // Progress stats cards
+        Row(
+          children: [
+            // Completed lessons card
+            Expanded(
+              child: _buildProgressCard(
+                title: 'Completed',
+                value: '$_completedLessons',
+                subtitle: 'Lessons',
+                icon: Icons.check_circle_outline,
+                color: Colors.green.shade400,
+                themeProvider: themeProvider,
+              ),
+            ),
+            const SizedBox(width: 16),
+
+            // Daily streak card
+            Expanded(
+              child: _buildProgressCard(
+                title: 'Streak',
+                value: '$_streak',
+                subtitle: 'Days',
+                icon: Icons.local_fire_department_outlined,
+                color: Colors.orange.shade400,
+                themeProvider: themeProvider,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Progress card widget with dark mode support
+  Widget _buildProgressCard({
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required ThemeProvider themeProvider,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: themeProvider.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color:
+                Colors.black.withOpacity(themeProvider.isDarkMode ? 0.2 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: color,
+                  size: 24,
+                ),
+              ),
+              const Spacer(),
+              // Animated value for visual interest
+              TweenAnimationBuilder<double>(
+                tween: Tween<double>(
+                    begin: 0, end: double.parse(value == '' ? '0' : value)),
+                duration: const Duration(milliseconds: 1500),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return Text(
+                    value.toInt().toString(),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.textColor,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: themeProvider.textColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 14,
+              color: themeProvider.lightTextColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCourseSection(ThemeProvider themeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Current Course',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: themeProvider.textColor,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CoursesScreen(),
+                  ),
+                );
+              },
+              child: Text(
+                'All Courses',
+                style: TextStyle(
+                  color: themeProvider.accentColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Current course progress card
         Container(
+          width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: kCardColor,
-            borderRadius: BorderRadius.circular(24),
+            color: themeProvider.cardColor,
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black
+                    .withOpacity(themeProvider.isDarkMode ? 0.2 : 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Current Course',
-                        style: TextStyle(
-                          color: kLightTextColor,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _currentCourse != null
-                            ? _currentCourse!['title']
-                            : 'Basic Kinyarwanda',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: kTextColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.play_circle_outline,
-                              color: kSecondaryColor, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Continue Learning',
-                            style: TextStyle(
-                              color: kSecondaryColor,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
+                  // Course info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _currentCourse != null
+                              ? _currentCourse!['title']
+                              : 'English for Beginners',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: themeProvider.textColor,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _currentCourse != null
+                              ? _currentCourse!['description'] ??
+                                  'Continue your language learning journey'
+                              : 'Continue your language learning journey',
+                          style: TextStyle(
+                            color: themeProvider.lightTextColor,
+                            fontSize: 14,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 16),
+
+                  // Circular progress indicator
                   CircularPercentIndicator(
-                    radius: 40,
+                    radius: 35,
                     lineWidth: 8,
                     percent: _courseProgress,
                     center: Text(
-                      "${(_courseProgress * 100).round()}%",
-                      style: const TextStyle(
+                      '${(_courseProgress * 100).round()}%',
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                        fontSize: 16,
+                        color: themeProvider.textColor,
                       ),
                     ),
-                    backgroundColor: Colors.grey.shade200,
-                    progressColor: kPrimaryColor,
+                    backgroundColor: themeProvider.isDarkMode
+                        ? Colors.grey.shade800
+                        : Colors.grey.shade200,
+                    progressColor: themeProvider.primaryColor,
                     circularStrokeCap: CircularStrokeCap.round,
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              LinearProgressIndicator(
-                value: _courseProgress,
-                minHeight: 8,
-                backgroundColor: const Color(0xFFE0E0E0),
-                valueColor: const AlwaysStoppedAnimation<Color>(kPrimaryColor),
-                borderRadius: const BorderRadius.all(Radius.circular(10)),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              const SizedBox(height: 20),
+
+              // Progress bar
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _completedLessons > 0
-                        ? '$_completedLessons Lessons Completed'
-                        : '0 Lessons Completed',
-                    style: const TextStyle(
-                      color: kLightTextColor,
-                      fontSize: 14,
-                    ),
+                  LinearProgressIndicator(
+                    value: _courseProgress,
+                    minHeight: 8,
+                    backgroundColor: themeProvider.isDarkMode
+                        ? Colors.grey.shade800
+                        : Colors.grey.shade200,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        themeProvider.primaryColor),
+                    borderRadius: const BorderRadius.all(Radius.circular(10)),
                   ),
-                  // Calculate remaining lessons (assuming 10 lessons total)
-                  Text(
-                    _completedLessons > 0 && _completedLessons < 10
-                        ? '${10 - _completedLessons} Left'
-                        : '',
-                    style: const TextStyle(
-                      color: kLightTextColor,
-                      fontSize: 14,
-                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '$_completedLessons Lessons Completed',
+                        style: TextStyle(
+                          color: themeProvider.lightTextColor,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        '${_currentCourse != null ? (_currentCourse!['totalLessons'] ?? 10) - _completedLessons : 10 - _completedLessons} Left',
+                        style: TextStyle(
+                          color: themeProvider.lightTextColor,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // Continue learning button
+              ElevatedButton(
+                onPressed: () {
+                  // Navigate to current lesson
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: themeProvider.primaryColor,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.play_circle_outline, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Continue Learning',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -817,16 +1052,16 @@ class _UserDashboardState extends State<UserDashboard> {
     );
   }
 
-  Widget _buildMenuGrid(BuildContext context) {
+  Widget _buildFeaturesSection(ThemeProvider themeProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Explore Features',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: kTextColor,
+            color: themeProvider.textColor,
           ),
         ),
         const SizedBox(height: 16),
@@ -838,14 +1073,34 @@ class _UserDashboardState extends State<UserDashboard> {
           mainAxisSpacing: 16,
           childAspectRatio: 1.25,
           children: [
-            _buildMenuCard(context, Icons.menu_book, 'Courses',
-                'Learn structured lessons'),
-            _buildMenuCard(context, Icons.chat_bubble_outline, 'Chatbot',
-                'Practice conversations'),
             _buildMenuCard(
-                context, Icons.quiz_outlined, 'Quizzes', 'Test your knowledge'),
+              context,
+              Icons.menu_book,
+              'Courses',
+              'Learn structured lessons',
+              themeProvider,
+            ),
             _buildMenuCard(
-                context, Icons.translate, 'Translate', 'Instant translations'),
+              context,
+              Icons.chat_bubble_outline,
+              'Chatbot',
+              'Practice conversations',
+              themeProvider,
+            ),
+            _buildMenuCard(
+              context,
+              Icons.quiz_outlined,
+              'Quizzes',
+              'Test your knowledge',
+              themeProvider,
+            ),
+            _buildMenuCard(
+              context,
+              Icons.translate,
+              'Translate',
+              'Instant translations',
+              themeProvider,
+            ),
           ],
         ),
       ],
@@ -857,60 +1112,71 @@ class _UserDashboardState extends State<UserDashboard> {
     IconData icon,
     String title,
     String subtitle,
+    ThemeProvider themeProvider,
   ) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.grey.shade200),
+    return Container(
+      decoration: BoxDecoration(
+        color: themeProvider.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color:
+                Colors.black.withOpacity(themeProvider.isDarkMode ? 0.2 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => _getDestinationScreen(title),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => _getDestinationScreen(title),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: themeProvider.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: themeProvider.primaryColor,
+                    size: 24,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: themeProvider.textColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: themeProvider.lightTextColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          );
-        },
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: kPrimaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: kPrimaryColor,
-                  size: 24,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: kTextColor,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: kTextColor.withOpacity(0.6),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
           ),
         ),
       ),
@@ -924,7 +1190,7 @@ class _UserDashboardState extends State<UserDashboard> {
       case 'chatbot':
         return const ChatbotScreen();
       case 'quizzes':
-        return const ProgressScreen(); // Replace with actual quiz screen
+        return const ProgressScreen(); // Replace with actual quiz screen when available
       case 'translate':
         return const TranslationScreen();
       default:
@@ -1129,6 +1395,79 @@ class _UserDashboardState extends State<UserDashboard> {
           ),
         ],
       ),
+    );
+  }
+
+  // Add logout confirmation dialog
+  Future<void> _showLogoutConfirmationDialog(BuildContext context) async {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: themeProvider.cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Logout',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: themeProvider.textColor,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(
+              color: themeProvider.lightTextColor,
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: themeProvider.lightTextColor,
+              ),
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeProvider.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Logout'),
+              onPressed: () async {
+                // Clear user data
+                await UserCacheService.clearCache();
+
+                // Clear SharedPreferences auth data
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.remove('auth_token');
+                await prefs.remove('user_id');
+
+                // Navigate to login page and clear navigation history
+                if (context.mounted) {
+                  // Use MaterialPageRoute instead of named route for more reliability
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const SignInScreen(), // Import this at the top
+                    ),
+                    (route) => false,
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

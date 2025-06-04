@@ -1,18 +1,16 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 class AuthService {
   // Base URL for API requests
   static const String baseUrl = 'http://10.0.2.2:8080/api/v1/auth';
 
   // Sign up method
   Future<Map<String, dynamic>> signUp(
-    String firstName,
-    String lastName,
-    String email,
-    String password,
-    {String role = 'ROLE_USER'} // Default role is USER, but can be overridden
-  ) async {
+      String firstName, String lastName, String email, String password,
+      {String role = 'ROLE_USER'} // Default role is USER, but can be overridden
+      ) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/register'),
@@ -50,29 +48,79 @@ class AuthService {
         }),
       );
 
+      // Create result map with default values
+      Map<String, dynamic> result = {
+        'success': false,
+        'message': 'Unknown error occurred',
+      };
+
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        
+        // If response body is empty or not valid JSON, handle gracefully
+        if (response.body.isEmpty) {
+          result['message'] = 'Empty response from server';
+          return result;
+        }
+
+        Map<String, dynamic> data;
+        try {
+          data = json.decode(response.body);
+        } catch (e) {
+          result['message'] = 'Invalid response format';
+          return result;
+        }
+
+        // Add success flag to the response data
+        data['success'] = true;
+
         // Save token to shared preferences
         final prefs = await SharedPreferences.getInstance();
         if (data.containsKey('accessToken')) {
           await prefs.setString('auth_token', data['accessToken']);
         } else if (data.containsKey('access_token')) {
           await prefs.setString('auth_token', data['access_token']);
+        } else {
+          // No token found, handle error
+          data['success'] = false;
+          data['message'] = 'No authentication token found in response';
+          return data;
         }
-        
+
         // Extract and save user role
-        if (data.containsKey('user') && data['user'] is Map && data['user'].containsKey('role')) {
-          await prefs.setString('user_role', data['user']['role']);
+        bool isAdmin = false;
+        if (data.containsKey('user') &&
+            data['user'] is Map &&
+            data['user'].containsKey('role')) {
+          String role = data['user']['role'];
+          await prefs.setString('user_role', role);
+          isAdmin = role == 'ROLE_ADMIN' || role == 'ADMIN';
         }
-        
+
+        // Set isAdmin flag explicitly
+        data['isAdmin'] = isAdmin;
+
         return data;
       } else {
-        final Map<String, dynamic> errorData = json.decode(response.body);
-        throw Exception(errorData['message'] ?? 'Failed to sign in');
+        // Handle error response
+        if (response.body.isNotEmpty) {
+          try {
+            final Map<String, dynamic> errorData = json.decode(response.body);
+            result['message'] = errorData['message'] ?? 'Failed to sign in';
+          } catch (e) {
+            result['message'] =
+                'Failed to sign in: Server error (${response.statusCode})';
+          }
+        } else {
+          result['message'] =
+              'Failed to sign in: Server error (${response.statusCode})';
+        }
+        return result;
       }
     } catch (e) {
-      throw Exception('Connection error: $e');
+      // Handle connection errors
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+      };
     }
   }
 
@@ -82,7 +130,7 @@ class AuthService {
     await prefs.remove('auth_token');
     await prefs.remove('user_role');
   }
-  
+
   // Create admin user
   Future<Map<String, dynamic>> createAdmin(
     String firstName,
@@ -92,19 +140,24 @@ class AuthService {
   ) async {
     return signUp(firstName, lastName, email, password, role: 'ADMIN');
   }
-  
+
   // Get current user role
   Future<String> getUserRole() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('user_role') ?? 'USER';
   }
-  
+
   // Check if user is admin
   Future<bool> isAdmin() async {
-    final role = await getUserRole();
-    return role == 'ROLE_ADMIN' || role == 'ADMIN';
+    try {
+      final role = await getUserRole();
+      return role == 'ROLE_ADMIN' || role == 'ADMIN';
+    } catch (e) {
+      print('Error checking admin status: $e');
+      return false;
+    }
   }
-  
+
   // Save user role to shared preferences
   Future<void> saveUserRole(String role) async {
     final prefs = await SharedPreferences.getInstance();

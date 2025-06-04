@@ -4,8 +4,10 @@ import 'package:afrilingo/services/audio_service.dart';
 import 'package:afrilingo/widgets/audio_player_widget.dart';
 import 'package:flutter/services.dart';
 import 'package:percent_indicator/linear_percent_indicator.dart';
+import 'package:provider/provider.dart';
+import 'package:afrilingo/services/theme_provider.dart';
 
-// African-inspired color palette
+// African-inspired color palette (kept as fallback)
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
 const Color kSecondaryColor = Color(0xFFC78539); // Light brown
 const Color kAccentColor = Color(0xFF546CC3); // Blue accent
@@ -72,7 +74,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
             final trimmed = line.trim();
             if (trimmed.isEmpty) continue;
 
-            // Section headers (# or ##)
+            // Section headersment (# or ##)
             final headerMatch = RegExp(r'^(#+)\s*(.*)').firstMatch(trimmed);
             if (headerMatch != null) {
               // If we have accumulated bullets for a previous section, add them first
@@ -214,18 +216,21 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     if (learningSteps.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.info_outline, size: 64, color: kLightTextColor),
+            Icon(Icons.info_outline,
+                size: 64, color: themeProvider.lightTextColor),
             const SizedBox(height: 16),
             Text(
               'No learning content available.',
               style: TextStyle(
                 fontSize: 18,
-                color: kLightTextColor,
+                color: themeProvider.lightTextColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -235,10 +240,10 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
     }
 
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: themeProvider.backgroundColor,
       body: Column(
         children: [
-          _buildProgressBar(),
+          _buildProgressBar(themeProvider),
           Expanded(
             child: PageView.builder(
               controller: _pageController,
@@ -255,22 +260,22 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                 final step = learningSteps[index];
                 return FadeTransition(
                   opacity: _fadeAnimation,
-                  child: _buildStepCard(step),
+                  child: _buildStepCard(step, themeProvider),
                 );
               },
             ),
           ),
-          _buildNavigationControls(),
+          _buildNavigationControls(themeProvider),
         ],
       ),
     );
   }
 
-  Widget _buildProgressBar() {
+  Widget _buildProgressBar(ThemeProvider themeProvider) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: themeProvider.cardColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -288,7 +293,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
               Text(
                 'Lesson Progress',
                 style: TextStyle(
-                  color: kTextColor,
+                  color: themeProvider.textColor,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
@@ -296,7 +301,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
               Text(
                 '${((currentStepIndex + 1) / learningSteps.length * 100).toInt()}%',
                 style: TextStyle(
-                  color: kPrimaryColor,
+                  color: themeProvider.primaryColor,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
@@ -307,8 +312,8 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
           LinearPercentIndicator(
             lineHeight: 8.0,
             percent: (currentStepIndex + 1) / learningSteps.length,
-            backgroundColor: kDividerColor,
-            progressColor: kPrimaryColor,
+            backgroundColor: themeProvider.dividerColor,
+            progressColor: themeProvider.primaryColor,
             barRadius: const Radius.circular(8),
             padding: EdgeInsets.zero,
             animation: true,
@@ -319,26 +324,26 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
     );
   }
 
-  Widget _buildStepCard(LearningStep step) {
+  Widget _buildStepCard(LearningStep step, ThemeProvider themeProvider) {
     switch (step.type) {
       case StepType.mainHeader:
-        return _buildMainHeaderCard(step);
+        return _buildMainHeaderCard(step, themeProvider);
       case StepType.subHeader:
-        return _buildSubHeaderCard(step);
+        return _buildSubHeaderCard(step, themeProvider);
       case StepType.phrase:
-        return _buildPhraseCard(step);
+        return _buildPhraseCard(step, themeProvider);
       case StepType.bulletList:
-        return _buildBulletListCard(step);
+        return _buildBulletListCard(step, themeProvider);
       case StepType.paragraph:
-        return _buildParagraphCard(step);
+        return _buildParagraphCard(step, themeProvider);
       case StepType.audio:
-        return _buildAudioCard(step);
+        return _buildAudioCard(step, themeProvider);
       case StepType.image:
-        return _buildImageCard(step);
+        return _buildImageCard(step, themeProvider);
     }
   }
 
-  Widget _buildMainHeaderCard(LearningStep step) {
+  Widget _buildMainHeaderCard(LearningStep step, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 4,
@@ -350,7 +355,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [kPrimaryColor, kSecondaryColor],
+            colors: [themeProvider.primaryColor, themeProvider.secondaryColor],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -397,7 +402,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
     );
   }
 
-  Widget _buildSubHeaderCard(LearningStep step) {
+  Widget _buildSubHeaderCard(LearningStep step, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 3,
@@ -409,7 +414,10 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [kAccentColor.withOpacity(0.8), kAccentColor],
+            colors: [
+              themeProvider.accentColor.withOpacity(0.8),
+              themeProvider.accentColor
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -439,7 +447,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
     );
   }
 
-  Widget _buildPhraseCard(LearningStep step) {
+  Widget _buildPhraseCard(LearningStep step, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 2,
@@ -449,9 +457,10 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: kCardColor,
+          color: themeProvider.cardColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kSecondaryColor.withOpacity(0.3), width: 2),
+          border: Border.all(
+              color: themeProvider.secondaryColor.withOpacity(0.3), width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -461,14 +470,14 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: kSecondaryColor.withOpacity(0.1),
+                  color: themeProvider.secondaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   step.section!,
                   style: TextStyle(
                     fontSize: 14,
-                    color: kSecondaryColor,
+                    color: themeProvider.secondaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -478,7 +487,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: kPrimaryColor.withOpacity(0.05),
+                color: themeProvider.primaryColor.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -486,7 +495,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: kPrimaryColor,
+                  color: themeProvider.primaryColor,
                   letterSpacing: 0.5,
                 ),
                 textAlign: TextAlign.center,
@@ -500,20 +509,20 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                   Container(
                     height: 1.5,
                     width: 40,
-                    color: kDividerColor,
+                    color: themeProvider.dividerColor,
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Icon(
                       Icons.translate,
                       size: 20,
-                      color: kLightTextColor,
+                      color: themeProvider.lightTextColor,
                     ),
                   ),
                   Container(
                     height: 1.5,
                     width: 40,
-                    color: kDividerColor,
+                    color: themeProvider.dividerColor,
                   ),
                 ],
               ),
@@ -523,7 +532,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w500,
-                  color: kTextColor,
+                  color: themeProvider.textColor,
                   fontStyle: FontStyle.italic,
                 ),
                 textAlign: TextAlign.center,
@@ -537,12 +546,12 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: kAccentColor.withOpacity(0.1),
+                    color: themeProvider.accentColor.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.volume_up,
-                    color: kAccentColor,
+                    color: themeProvider.accentColor,
                     size: 24,
                   ),
                 ),
@@ -551,7 +560,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                   'Tap to hear pronunciation',
                   style: TextStyle(
                     fontSize: 14,
-                    color: kLightTextColor,
+                    color: themeProvider.lightTextColor,
                   ),
                 ),
               ],
@@ -562,7 +571,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
     );
   }
 
-  Widget _buildBulletListCard(LearningStep step) {
+  Widget _buildBulletListCard(LearningStep step, ThemeProvider themeProvider) {
     final bullets = step.content.split('\n');
 
     return Card(
@@ -574,7 +583,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: kCardColor,
+          color: themeProvider.cardColor,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -586,7 +595,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: kPrimaryColor,
+                  color: themeProvider.primaryColor,
                 ),
               ),
               const SizedBox(height: 16),
@@ -594,7 +603,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                 height: 2,
                 width: 80,
                 decoration: BoxDecoration(
-                  color: kPrimaryColor,
+                  color: themeProvider.primaryColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -611,7 +620,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                       height: 8,
                       width: 8,
                       decoration: BoxDecoration(
-                        color: kSecondaryColor,
+                        color: themeProvider.secondaryColor,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -621,7 +630,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                         bullet,
                         style: TextStyle(
                           fontSize: 16,
-                          color: kTextColor,
+                          color: themeProvider.textColor,
                           height: 1.5,
                         ),
                       ),
@@ -636,7 +645,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
     );
   }
 
-  Widget _buildParagraphCard(LearningStep step) {
+  Widget _buildParagraphCard(LearningStep step, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 2,
@@ -646,7 +655,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: kCardColor,
+          color: themeProvider.cardColor,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -658,7 +667,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: kPrimaryColor,
+                  color: themeProvider.primaryColor,
                 ),
               ),
               const SizedBox(height: 16),
@@ -667,7 +676,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
               step.content,
               style: TextStyle(
                 fontSize: 16,
-                color: kTextColor,
+                color: themeProvider.textColor,
                 height: 1.6,
               ),
             ),
@@ -677,7 +686,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
     );
   }
 
-  Widget _buildAudioCard(LearningStep step) {
+  Widget _buildAudioCard(LearningStep step, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 2,
@@ -687,9 +696,10 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: kCardColor,
+          color: themeProvider.cardColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kAccentColor.withOpacity(0.3), width: 2),
+          border: Border.all(
+              color: themeProvider.accentColor.withOpacity(0.3), width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -697,13 +707,13 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: kAccentColor.withOpacity(0.1),
+                color: themeProvider.accentColor.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.headphones,
                 size: 56,
-                color: kAccentColor,
+                color: themeProvider.accentColor,
               ),
             ),
             const SizedBox(height: 24),
@@ -712,7 +722,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: kTextColor,
+                color: themeProvider.textColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -720,7 +730,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
               'Tap play and repeat after the audio',
               style: TextStyle(
                 fontSize: 14,
-                color: kLightTextColor,
+                color: themeProvider.lightTextColor,
               ),
             ),
             const SizedBox(height: 24),
@@ -731,7 +741,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
     );
   }
 
-  Widget _buildImageCard(LearningStep step) {
+  Widget _buildImageCard(LearningStep step, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 2,
@@ -741,7 +751,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: kCardColor,
+          color: themeProvider.cardColor,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -753,7 +763,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: kPrimaryColor,
+                  color: themeProvider.primaryColor,
                 ),
               ),
               const SizedBox(height: 16),
@@ -767,11 +777,11 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
                     height: 200,
-                    color: kDividerColor,
+                    color: themeProvider.dividerColor,
                     child: Center(
                       child: Icon(
                         Icons.image_not_supported,
-                        color: kLightTextColor,
+                        color: themeProvider.lightTextColor,
                         size: 40,
                       ),
                     ),
@@ -781,14 +791,14 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
                   if (loadingProgress == null) return child;
                   return Container(
                     height: 200,
-                    color: kDividerColor,
+                    color: themeProvider.dividerColor,
                     child: Center(
                       child: CircularProgressIndicator(
                         value: loadingProgress.expectedTotalBytes != null
                             ? loadingProgress.cumulativeBytesLoaded /
                                 (loadingProgress.expectedTotalBytes ?? 1)
                             : null,
-                        color: kPrimaryColor,
+                        color: themeProvider.primaryColor,
                       ),
                     ),
                   );
@@ -800,7 +810,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
               step.content,
               style: TextStyle(
                 fontSize: 16,
-                color: kTextColor,
+                color: themeProvider.textColor,
               ),
               textAlign: TextAlign.center,
             ),
@@ -810,11 +820,11 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
     );
   }
 
-  Widget _buildNavigationControls() {
+  Widget _buildNavigationControls(ThemeProvider themeProvider) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: themeProvider.cardColor,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -832,17 +842,19 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
             icon: const Icon(Icons.arrow_back_rounded, size: 20),
             label: const Text('Previous'),
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  currentStepIndex > 0 ? kCardColor : Colors.grey.shade200,
-              foregroundColor:
-                  currentStepIndex > 0 ? kPrimaryColor : Colors.grey,
+              backgroundColor: currentStepIndex > 0
+                  ? themeProvider.cardColor
+                  : Colors.grey.shade200,
+              foregroundColor: currentStepIndex > 0
+                  ? themeProvider.primaryColor
+                  : Colors.grey,
               elevation: currentStepIndex > 0 ? 2 : 0,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
                 side: BorderSide(
                   color: currentStepIndex > 0
-                      ? kPrimaryColor.withOpacity(0.5)
+                      ? themeProvider.primaryColor.withOpacity(0.5)
                       : Colors.transparent,
                 ),
               ),
@@ -853,7 +865,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: kPrimaryColor.withOpacity(0.1),
+              color: themeProvider.primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -861,7 +873,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: kPrimaryColor,
+                color: themeProvider.primaryColor,
               ),
             ),
           ),
@@ -874,7 +886,7 @@ class _LessonContentWidgetState extends State<LessonContentWidget>
             icon: const Icon(Icons.arrow_forward_rounded, size: 20),
             style: ElevatedButton.styleFrom(
               backgroundColor: currentStepIndex < learningSteps.length - 1
-                  ? kPrimaryColor
+                  ? themeProvider.primaryColor
                   : Colors.grey.shade200,
               foregroundColor: currentStepIndex < learningSteps.length - 1
                   ? Colors.white

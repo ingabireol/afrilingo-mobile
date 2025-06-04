@@ -23,6 +23,7 @@ class _WritingScreenState extends State<WritingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -47,13 +48,15 @@ class _WritingScreenState extends State<WritingScreen> {
                       onPressed: () => Navigator.pop(context),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.notifications_none, color: Colors.white),
+                      icon: const Icon(Icons.notifications_none,
+                          color: Colors.white),
                       onPressed: () {},
                     ),
                   ],
                 ),
               ),
-              const Center(  // Added Center widget here
+              const Center(
+                // Added Center widget here
                 child: Text(
                   'Writing - Kinyarwanda',
                   style: TextStyle(
@@ -97,7 +100,8 @@ class _WritingScreenState extends State<WritingScreen> {
                           children: [
                             Expanded(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: Colors.grey[100],
                                   borderRadius: BorderRadius.circular(12),
@@ -105,9 +109,15 @@ class _WritingScreenState extends State<WritingScreen> {
                                 ),
                                 child: TextField(
                                   controller: _textController,
+                                  keyboardType: TextInputType.text,
+                                  textInputAction: TextInputAction.done,
+                                  style: const TextStyle(fontSize: 16),
                                   decoration: const InputDecoration(
                                     hintText: 'Witwa nde?',
                                     border: InputBorder.none,
+                                    contentPadding:
+                                        EdgeInsets.symmetric(vertical: 8),
+                                    isDense: false,
                                   ),
                                 ),
                               ),
@@ -117,7 +127,8 @@ class _WritingScreenState extends State<WritingScreen> {
                               children: [
                                 CircleAvatar(
                                   backgroundColor: Colors.grey[200],
-                                  child: const Icon(Icons.mic, color: Colors.black54),
+                                  child: const Icon(Icons.mic,
+                                      color: Colors.black54),
                                 ),
                                 const SizedBox(height: 4),
                                 const Row(
@@ -132,7 +143,8 @@ class _WritingScreenState extends State<WritingScreen> {
                                       ),
                                     ),
                                     SizedBox(width: 4),
-                                    Icon(Icons.person, size: 12, color: Colors.brown),
+                                    Icon(Icons.person,
+                                        size: 12, color: Colors.brown),
                                   ],
                                 ),
                               ],
@@ -209,7 +221,8 @@ class CustomKeyboard extends StatelessWidget {
             GestureDetector(
               onTap: () {},
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(4),
@@ -235,7 +248,8 @@ class CustomKeyboard extends StatelessWidget {
             GestureDetector(
               onTap: () {},
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(4),
@@ -267,17 +281,17 @@ class KeyboardRow extends StatelessWidget {
       children: keys
           .map(
             (key) => GestureDetector(
-          onTap: () => onKeyTap(key),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(4),
+              onTap: () => onKeyTap(key),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(key),
+              ),
             ),
-            child: Text(key),
-          ),
-        ),
-      )
+          )
           .toList(),
     );
   }
