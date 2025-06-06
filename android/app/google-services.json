@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "576832027204",
+    "project_id": "afrilingo-af039",
+    "storage_bucket": "afrilingo-af039.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:576832027204:android:9ea48d974e1313ac05da11",
+        "android_client_info": {
+          "package_name": "com.example.myapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "576832027204-a5fk65anbvqd7qfb83d3478lndcrq98j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDWGsFEXyLXPa2o-wzOjspzlXdEhGfCzL8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "576832027204-a5fk65anbvqd7qfb83d3478lndcrq98j.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:576832027204:android:8ec24718259279c705da11",
+        "android_client_info": {
+          "package_name": "com.your.afrilingo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "576832027204-a5fk65anbvqd7qfb83d3478lndcrq98j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDWGsFEXyLXPa2o-wzOjspzlXdEhGfCzL8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "576832027204-a5fk65anbvqd7qfb83d3478lndcrq98j.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:afrilingo/services/theme_provider.dart';
+import 'package:afrilingo/core/theme/theme_provider.dart';
 
 /// Utility class to provide consistent theme-based styling across the app
 class AppTheme {

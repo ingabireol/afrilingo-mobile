@@ -25,7 +25,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace = "com.example.afrilingo"
-    compileSdk = 34
+    compileSdk = 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -47,6 +47,9 @@ android {
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        
+        // Add the Google OAuth client ID as a resource string
+        resValue "string", "google_client_id", "210719579165-rv6q88vphnmtrm51odspd56j8kvain42.apps.googleusercontent.com"
     }
 
     buildTypes {
