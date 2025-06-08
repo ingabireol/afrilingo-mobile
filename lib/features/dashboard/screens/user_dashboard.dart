@@ -19,6 +19,7 @@ import 'package:afrilingo/features/language/screens/language_selection_screen.da
 import 'package:afrilingo/features/profile/services/profile_service.dart';
 import 'package:afrilingo/features/chat/screens/translating.dart';
 import 'package:afrilingo/features/auth/screens/sign_in_screen.dart';
+import 'package:afrilingo/features/quiz/screens/QuizScreen.dart';
 
 import 'dart:async';
 import 'dart:math';
@@ -41,7 +42,7 @@ class UserDashboard extends StatefulWidget {
 }
 
 class _UserDashboardState extends State<UserDashboard>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   UserProfile? _profile;
   bool _isLoadingProfile = false;
   String _cachedFirstName = '';
@@ -50,6 +51,8 @@ class _UserDashboardState extends State<UserDashboard>
   late AnimationController _animationController;
   late Animation<double> _fadeInAnimation;
   Timer? _refreshTimer;
+  DateTime? _lastRefreshTime;
+  bool _loadingStreak = false; // Track when streak is being loaded
 
   // Dashboard data
   Map<String, dynamic>? _dashboardData;
@@ -64,6 +67,9 @@ class _UserDashboardState extends State<UserDashboard>
   @override
   void initState() {
     super.initState();
+    // Register as an observer to detect app lifecycle changes
+    WidgetsBinding.instance.addObserver(this);
+
     // Initialize animation controller
     _animationController = AnimationController(
       vsync: this,
@@ -91,13 +97,31 @@ class _UserDashboardState extends State<UserDashboard>
         _refreshData(showIndicator: false);
       }
     });
+
+    // Record initial refresh time
+    _lastRefreshTime = DateTime.now();
   }
 
   @override
   void dispose() {
+    // Remove observer when widget is disposed
+    WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
     _refreshTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When app resumes from background, refresh data if it's been more than 1 minute
+    if (state == AppLifecycleState.resumed) {
+      final now = DateTime.now();
+      if (_lastRefreshTime != null &&
+          now.difference(_lastRefreshTime!).inSeconds > 60) {
+        // App was in background for more than a minute, refresh data
+        _refreshData(showIndicator: false);
+      }
+    }
   }
 
   void _initializeServices() {
@@ -140,14 +164,31 @@ class _UserDashboardState extends State<UserDashboard>
       // Then load cached data for other fields
       await _loadCachedUserInfo();
 
+      // Set loading state for streak
+      setState(() {
+        _loadingStreak = true;
+      });
+
+      // Load streak DIRECTLY from server, bypassing cache
+      try {
+        final freshStreak =
+            await _profileService.getUserStreak(forceRefresh: true);
+        if (freshStreak > 0 && mounted) {
+          setState(() {
+            _streak = freshStreak;
+            _loadingStreak = false;
+          });
+          print("Loaded fresh streak directly from server: $freshStreak");
+        }
+      } catch (streakError) {
+        print("Error loading fresh streak: $streakError");
+      }
+
       // Then load the full profile (this will update UI when completed)
       await _loadUserProfile();
 
-      // Then load other dashboard data
-      await Future.wait([
-        _loadDashboardData(),
-        _loadStreakData(),
-      ]);
+      // Load other dashboard data in parallel
+      await _loadDashboardData();
 
       _logCompletedLessonsInfo();
     } catch (e) {
@@ -160,6 +201,13 @@ class _UserDashboardState extends State<UserDashboard>
         _loadStreakData(),
       ]);
       _logCompletedLessonsInfo();
+    } finally {
+      // Make sure loading state is reset
+      if (mounted) {
+        setState(() {
+          _loadingStreak = false;
+        });
+      }
     }
   }
 
@@ -308,15 +356,7 @@ class _UserDashboardState extends State<UserDashboard>
               _updateLocalCompletedLessonsCount(_completedLessons);
             }
 
-            // Get streak
-            final streak = stats['streak'];
-            if (streak != null) {
-              _streak = streak is int ? streak : int.parse(streak.toString());
-              print('Dashboard: Loaded streak value from dashboard: $_streak');
-
-              // Update local streak to keep it in sync with server
-              _updateLocalStreak(_streak);
-            }
+            // NOTE: We don't get streak from dashboard anymore - handled in _loadStreakData
           }
 
           // Get first course from recommendations or current courses
@@ -394,6 +434,9 @@ class _UserDashboardState extends State<UserDashboard>
           }
         });
       }
+
+      // Always load streak from the dedicated endpoint AFTER loading dashboard data
+      await _loadStreakData();
     } catch (e) {
       print('Error loading dashboard data: $e');
       // Use local data on error
@@ -458,59 +501,46 @@ class _UserDashboardState extends State<UserDashboard>
     }
   }
 
+  // Load streak data from the dedicated streak endpoint
   Future<void> _loadStreakData() async {
     try {
-      print('Loading streak data...');
+      setState(() {
+        _loadingStreak = true;
+      });
 
-      // First try to get streak from user identity
-      final identity = await UserCacheService.getCurrentUserIdentity();
-      if (identity != null && identity.streak > 0) {
-        print('Loaded streak from identity: ${identity.streak}');
-        if (mounted) {
-          setState(() {
-            _streak = identity.streak;
-          });
-        }
-        return;
-      }
+      // Try to load directly from the server first
+      final serverStreak =
+          await _profileService.getUserStreak(forceRefresh: true);
 
-      // Try to get from UserCacheService
-      final cachedStreak = await UserCacheService.getCachedStreak();
-      if (cachedStreak > 0) {
-        print('Loaded streak from UserCacheService: $cachedStreak');
-        if (mounted) {
-          setState(() {
-            _streak = cachedStreak;
-          });
-        }
-        return;
-      }
+      print('Loaded streak directly from server: $serverStreak');
 
-      // Use the dedicated streak method if identity doesn't have it
-      final streak = await _profileService.getUserStreak();
-      print('Loaded streak from profile service: $streak');
-
+      // Always update with server value regardless of cached value
       if (mounted) {
         setState(() {
-          _streak = streak;
+          _streak = serverStreak;
+          _loadingStreak = false;
         });
       }
+
+      // Update local cache with server value
+      await _updateLocalStreak(serverStreak);
+
+      // Log debug info
+      await _logCompletedLessonsInfo();
     } catch (e) {
-      print('Error loading streak data: $e');
+      print('Error loading streak: $e');
 
-      // Try to load streak from local storage directly
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final localStreak = prefs.getInt('user_streak') ?? 0;
-        print('Loaded streak from direct local storage: $localStreak');
-
-        if (mounted && localStreak > 0) {
-          setState(() {
-            _streak = localStreak;
-          });
-        }
-      } catch (storageError) {
-        print('Error loading streak from local storage: $storageError');
+      // Only use cached streak if server call fails
+      final cachedStreak = await UserCacheService.getCachedStreak();
+      if (cachedStreak > 0 && mounted) {
+        setState(() {
+          _streak = cachedStreak;
+          _loadingStreak = false;
+        });
+      } else {
+        setState(() {
+          _loadingStreak = false;
+        });
       }
     }
   }
@@ -535,16 +565,27 @@ class _UserDashboardState extends State<UserDashboard>
   // Pull-to-refresh functionality
   Future<void> _refreshData({bool showIndicator = true}) async {
     try {
+      // Record refresh time
+      _lastRefreshTime = DateTime.now();
+
+      // First load profile and dashboard data
       await _loadUserProfile();
       await _loadDashboardData();
+
+      // Then load streak with retries to ensure we get latest data
       await _loadStreakData();
+
+      // Log debug info
       await _logCompletedLessonsInfo();
     } catch (e) {
       print('Error refreshing data: $e');
     } finally {
       if (showIndicator && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Data refreshed successfully!')),
+          SnackBar(
+            content: Text('Data refreshed successfully!'),
+            duration: Duration(seconds: 1),
+          ),
         );
       }
     }
@@ -696,19 +737,31 @@ class _UserDashboardState extends State<UserDashboard>
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            // Profile circle with initial
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: Colors.white.withOpacity(0.2),
-              child: Text(
-                displayName.isNotEmpty ? displayName[0].toUpperCase() : 'A',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+            // Profile picture if available, otherwise show initial
+            _cachedProfilePicture != null && _cachedProfilePicture!.isNotEmpty
+                ? Hero(
+                    tag: 'dashboardProfilePicture',
+                    child: ProfileImageHelper.buildProfileAvatar(
+                      imageUrl: _cachedProfilePicture,
+                      radius: 30,
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      iconColor: Colors.white,
+                    ),
+                  )
+                : CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    child: Text(
+                      displayName.isNotEmpty
+                          ? displayName[0].toUpperCase()
+                          : 'A',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
             const SizedBox(width: 16),
 
             // Welcome text
@@ -855,6 +908,9 @@ class _UserDashboardState extends State<UserDashboard>
     required Color color,
     required ThemeProvider themeProvider,
   }) {
+    // Check if this is the streak card and if streak is being loaded
+    final bool isStreakCard = title == 'Streak';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -899,23 +955,92 @@ class _UserDashboardState extends State<UserDashboard>
                 },
               ),
               const Spacer(),
-              // Animated value counter with updated animation
-              TweenAnimationBuilder<double>(
-                tween: Tween<double>(
-                    begin: 0, end: double.parse(value == '' ? '0' : value)),
-                duration: const Duration(milliseconds: 1500),
-                curve: Curves.easeOutCubic,
-                builder: (context, value, child) {
-                  return Text(
-                    value.toInt().toString(),
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: themeProvider.textColor,
-                    ),
-                  );
-                },
-              ),
+              // Streak value with loading indicator
+              isStreakCard && _loadingStreak
+                  ? Row(
+                      children: [
+                        AnimatedSwitcher(
+                          duration: Duration(milliseconds: 500),
+                          transitionBuilder:
+                              (Widget child, Animation<double> animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.0, 0.5),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Text(
+                            value,
+                            key: ValueKey<String>(
+                                value), // Key helps with animation
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: themeProvider.textColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.orange,
+                            backgroundColor: Colors.orange.withOpacity(0.2),
+                          ),
+                        ),
+                      ],
+                    )
+                  : isStreakCard
+                      ? AnimatedSwitcher(
+                          duration: Duration(milliseconds: 500),
+                          transitionBuilder:
+                              (Widget child, Animation<double> animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0.0, 0.5),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Text(
+                            value,
+                            key: ValueKey<String>(
+                                value), // Key helps with animation
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: themeProvider.textColor,
+                            ),
+                          ),
+                        )
+                      : TweenAnimationBuilder<double>(
+                          tween: Tween<double>(
+                              begin: 0,
+                              end: double.parse(value == '' ? '0' : value)),
+                          duration: const Duration(milliseconds: 1500),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, value, child) {
+                            return Text(
+                              value.toInt().toString(),
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: themeProvider.textColor,
+                              ),
+                            );
+                          },
+                        ),
             ],
           ),
           const SizedBox(height: 12),
@@ -938,7 +1063,7 @@ class _UserDashboardState extends State<UserDashboard>
           if (title == 'Streak' && _streak > 0)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
-              child: _buildStreakIndicator(_streak, themeProvider),
+              child: _buildStreakWeekIndicators(themeProvider),
             ),
         ],
       ),
@@ -966,14 +1091,19 @@ class _UserDashboardState extends State<UserDashboard>
     );
   }
 
-  // Visual streak indicator with better feedback
-  Widget _buildStreakIndicator(int streak, ThemeProvider themeProvider) {
+  // Build streak week indicators
+  Widget _buildStreakWeekIndicators(ThemeProvider themeProvider) {
     final List<Widget> indicators = [];
-    final int weekCount = (streak / 7).ceil();
+    final daysInCurrentWeek = min(_streak, 7); // Cap at 7 days
+    final weekCount = (_streak / 7).ceil(); // How many weeks to show
 
-    // Generate streak indicators
     for (int i = 0; i < min(weekCount, 7); i++) {
-      final int daysInThisWeek = min(7, max(0, streak - (i * 7)));
+      // Calculate days for this week (last week first)
+      final daysInThisWeek = i == 0
+          ? daysInCurrentWeek
+          : min(
+              7, max(0, _streak - (i * 7))); // Remaining days in previous weeks
+
       indicators.add(
         Expanded(
           child: Column(
@@ -993,7 +1123,8 @@ class _UserDashboardState extends State<UserDashboard>
               ClipRRect(
                 borderRadius: BorderRadius.circular(2),
                 child: LinearProgressIndicator(
-                  value: daysInThisWeek / 7,
+                  // Ensure value is between 0.0 and 1.0
+                  value: (daysInThisWeek / 7).clamp(0.0, 1.0),
                   backgroundColor: Colors.grey.withOpacity(0.2),
                   color: _getStreakColor(daysInThisWeek),
                   minHeight: 4,
@@ -1114,7 +1245,8 @@ class _UserDashboardState extends State<UserDashboard>
                   // Progress indicator
                   const SizedBox(height: 24),
                   TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 0.0, end: _courseProgress),
+                    tween: Tween<double>(
+                        begin: 0.0, end: _courseProgress.clamp(0.0, 1.0)),
                     duration: const Duration(milliseconds: 1500),
                     curve: Curves.easeOutCubic,
                     builder: (context, value, child) {
@@ -1129,7 +1261,7 @@ class _UserDashboardState extends State<UserDashboard>
                             child: CircularPercentIndicator(
                               radius: 45,
                               lineWidth: 12.0,
-                              percent: value,
+                              percent: value.clamp(0.0, 1.0),
                               center: Text(
                                 '$percentage%',
                                 style: TextStyle(
@@ -1363,7 +1495,9 @@ class _UserDashboardState extends State<UserDashboard>
       case 'chatbot':
         return const ChatbotScreen();
       case 'quizzes':
-        return const ProgressScreen(); // Replace with actual quiz screen when available
+        // Create a quiz start screen with default lesson ID (we'll use 1 for now)
+        // This will be improved later when we have lesson selection
+        return const QuizStartScreen(lessonId: 1);
       case 'translate':
         return const TranslationScreen();
       default:

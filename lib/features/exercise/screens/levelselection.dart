@@ -3,9 +3,173 @@ import 'package:afrilingo/features/exercise/screens/wordmatching.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:afrilingo/core/theme/theme_provider.dart';
+import 'package:afrilingo/features/lessons/services/lesson_service.dart';
+import 'package:afrilingo/features/lessons/models/lesson.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:afrilingo/features/quiz/screens/QuizScreen.dart';
+import 'package:afrilingo/features/quiz/models/quiz.dart';
+import 'package:afrilingo/core/services/user_cache_service.dart';
 
-class LevelSelectionScreen extends StatelessWidget {
-  const LevelSelectionScreen({super.key});
+class LevelSelectionScreen extends StatefulWidget {
+  final int courseId;
+
+  const LevelSelectionScreen({
+    super.key,
+    this.courseId = 1, // Default to course ID 1 if not provided
+  });
+
+  @override
+  State<LevelSelectionScreen> createState() => _LevelSelectionScreenState();
+}
+
+class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
+  final LessonService _lessonService = LessonService();
+  List<Quiz> _quizzes = [];
+  bool _isLoading = true;
+  String? _error;
+  int _highestUnlockedLevel = 1; // Default to level 1 unlocked
+  Map<int, bool> _completedLevels = {};
+  String _courseName = 'Quiz Progression'; // Default course name
+  String _userName = ''; // User's name
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuizzes();
+    _loadUserName();
+  }
+
+  // Load all quizzes and user progress
+  Future<void> _loadQuizzes() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      // 1. Load lessons for the course
+      final lessons =
+          await _lessonService.getLessonsByCourseId(widget.courseId);
+
+      // 2. Sort lessons by orderIndex
+      lessons.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+
+      // 3. Fetch quiz for each lesson
+      final List<Quiz> quizzes = [];
+      for (var lesson in lessons) {
+        try {
+          final quiz = await _lessonService.getQuizForLesson(lesson.id);
+          quizzes.add(quiz);
+        } catch (e) {
+          print('Error loading quiz for lesson ${lesson.id}: $e');
+          // Continue to next lesson if quiz can't be loaded
+        }
+      }
+
+      // 4. Load user progress from shared preferences
+      await _loadProgress();
+
+      setState(() {
+        _quizzes = quizzes;
+        _isLoading = false;
+        if (lessons.isNotEmpty) {
+          _courseName = '${lessons[0].type} Assessment';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Load progress from preferences
+  Future<void> _loadProgress() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Get the highest unlocked level
+      final highestLevel =
+          prefs.getInt('quiz_highest_unlocked_level_${widget.courseId}') ?? 1;
+
+      // Get completed levels
+      final completedLevelsStr =
+          prefs.getString('quiz_completed_levels_${widget.courseId}') ?? '';
+
+      setState(() {
+        _highestUnlockedLevel = highestLevel;
+
+        // Parse completed levels from string
+        if (completedLevelsStr.isNotEmpty) {
+          final levelsList = completedLevelsStr.split(',');
+          for (var level in levelsList) {
+            if (level.isNotEmpty) {
+              _completedLevels[int.parse(level)] = true;
+            }
+          }
+        }
+      });
+    } catch (e) {
+      print('Error loading progress: $e');
+      // Set defaults if error
+      setState(() {
+        _highestUnlockedLevel = 1;
+        _completedLevels = {1: false};
+      });
+    }
+  }
+
+  // Load user's name from cache
+  Future<void> _loadUserName() async {
+    try {
+      final name =
+          await UserCacheService.getCachedFullName(defaultValue: 'User');
+      if (mounted) {
+        setState(() {
+          _userName = name;
+        });
+      }
+    } catch (e) {
+      print('Error loading user name: $e');
+      // Default to empty if error
+      setState(() {
+        _userName = 'User';
+      });
+    }
+  }
+
+  // Mark a level as completed with 100% score
+  Future<void> _markLevelCompleted(int levelIndex, bool isPerfectScore) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Update completed levels only if perfect score
+      if (isPerfectScore) {
+        setState(() {
+          _completedLevels[levelIndex] = true;
+
+          // Unlock next level if available
+          if (levelIndex < _quizzes.length &&
+              levelIndex + 1 > _highestUnlockedLevel) {
+            _highestUnlockedLevel = levelIndex + 1;
+          }
+        });
+
+        // Save to preferences
+        await prefs.setInt('quiz_highest_unlocked_level_${widget.courseId}',
+            _highestUnlockedLevel);
+
+        final completedLevels = _completedLevels.keys
+            .where((k) => _completedLevels[k] == true)
+            .join(',');
+        await prefs.setString(
+            'quiz_completed_levels_${widget.courseId}', completedLevels);
+      }
+    } catch (e) {
+      print('Error saving progress: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +189,13 @@ class LevelSelectionScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    IconButton(
+                      icon: Icon(
+                        Icons.arrow_back,
+                        color: themeProvider.textColor,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
                     const Spacer(),
                     Column(
                       children: [
@@ -52,18 +223,18 @@ class LevelSelectionScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        const Row(
+                        Row(
                           children: [
                             Text(
-                              'Ishimwe Shakilla',
+                              _userName,
                               style: TextStyle(
-                                color: Colors.black87,
+                                color: themeProvider.textColor,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
                             ),
-                            SizedBox(width: 4),
-                            RwandaFlagCircle(),
+                            const SizedBox(width: 4),
+                            const RwandaFlagCircle(),
                           ],
                         ),
                       ],
@@ -107,24 +278,180 @@ class LevelSelectionScreen extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(25),
                 ),
-                child: const Text(
-                  'Level 1 : Word translation',
-                  style: TextStyle(
+                child: Text(
+                  'Quiz Progression: $_courseName',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: themeProvider.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: themeProvider.primaryColor.withOpacity(0.3),
+                  ),
+                ),
+                child: const Text(
+                  'Complete each quiz with 100% score to unlock the next level!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
               Expanded(
-                child: CurvedLevelPath(),
+                child: _isLoading
+                    ? _buildLoadingView(themeProvider)
+                    : _error != null
+                        ? _buildErrorView(themeProvider)
+                        : _quizzes.isEmpty
+                            ? _buildEmptyView(themeProvider)
+                            : CurvedLevelPath(
+                                quizzes: _quizzes,
+                                highestUnlockedLevel: _highestUnlockedLevel,
+                                completedLevels: _completedLevels,
+                                onLevelSelected: (quiz, levelIndex) {
+                                  // Navigate to the quiz screen
+                                  if (quiz.lessonId != null) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => QuizScreen(
+                                          lessonId: quiz.lessonId!,
+                                          isLevelProgressionMode: true,
+                                        ),
+                                      ),
+                                    ).then((result) {
+                                      // When returning from the quiz, check if we should unlock the next level
+                                      // This would require modifying the QuizScreen to return the score
+                                      if (result != null &&
+                                          result is Map<String, dynamic>) {
+                                        final score =
+                                            result['score'] as int? ?? 0;
+                                        final isPerfectScore = score == 100;
+
+                                        // Only mark as completed if 100% score
+                                        _markLevelCompleted(
+                                            levelIndex, isPerfectScore);
+
+                                        // Show a message about unlocking next level
+                                        if (isPerfectScore &&
+                                            levelIndex < _quizzes.length - 1) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  'Perfect score! You\'ve unlocked level ${levelIndex + 2}'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        } else if (!isPerfectScore) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  'You need 100% to unlock the next level. Try again!'),
+                                              backgroundColor: Colors.orange,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    });
+                                  }
+                                },
+                                themeProvider: themeProvider,
+                              ),
               ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: CustomBottomNavigationBar(
-        selectedIndex: 3,
+      bottomNavigationBar: const CustomBottomNavigationBar(selectedIndex: 3),
+    );
+  }
+
+  Widget _buildLoadingView(ThemeProvider themeProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: themeProvider.primaryColor),
+          const SizedBox(height: 16),
+          Text(
+            'Loading quizzes...',
+            style: TextStyle(
+              color: themeProvider.textColor,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorView(ThemeProvider themeProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load quizzes',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: themeProvider.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _error ?? 'Unknown error',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: themeProvider.lightTextColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _loadQuizzes,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themeProvider.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Try Again'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyView(ThemeProvider themeProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.quiz_outlined,
+            size: 64,
+            color: themeProvider.lightTextColor.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No quizzes found for this course',
+            style: TextStyle(
+              fontSize: 16,
+              color: themeProvider.lightTextColor,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -199,148 +526,173 @@ class RwandaFlagPainter extends CustomPainter {
 }
 
 class CurvedLevelPath extends StatelessWidget {
+  final List<Quiz> quizzes;
+  final int highestUnlockedLevel;
+  final Map<int, bool> completedLevels;
+  final Function(Quiz, int) onLevelSelected;
+  final ThemeProvider themeProvider;
+
+  const CurvedLevelPath({
+    super.key,
+    required this.quizzes,
+    required this.highestUnlockedLevel,
+    required this.completedLevels,
+    required this.onLevelSelected,
+    required this.themeProvider,
+  });
+
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    // Limit to maximum 6 levels for this UI
+    final displayQuizzes = quizzes.length > 6 ? quizzes.sublist(0, 6) : quizzes;
 
     return Stack(
       children: [
         CustomPaint(
-          size: Size(double.infinity, 500),
+          size: const Size(double.infinity, 500),
           painter: CurvedPathPainter(themeProvider: themeProvider),
         ),
         Column(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  child: LevelCircle(
-                    level: 1,
-                    isActive: true,
-                    icon: Icons.cases_rounded,
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const WordMatchingScreen()),
-                    );
-                  },
-                ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(width: 80),
-                LevelCircle(
-                  level: 2,
-                  isLocked: true,
-                  icon: Icons.lock,
-                ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                LevelCircle(
-                  level: 3,
-                  isLocked: true,
-                  icon: Icons.description_outlined,
-                ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(width: 80),
-                LevelCircle(
-                  level: 4,
-                  isLocked: true,
-                  icon: Icons.lock,
-                ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                LevelCircle(
-                  level: 5,
-                  isLocked: true,
-                  icon: Icons.lock,
-                ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(width: 80),
-                LevelCircle(
-                  level: 6,
-                  isLocked: true,
-                  icon: Icons.lock,
-                ),
-              ],
-            ),
+            // Dynamically generate level circles based on quizzes
+            for (int i = 0; i < displayQuizzes.length; i++)
+              _buildLevelRow(
+                context,
+                i,
+                displayQuizzes[i],
+                isLeftAligned: i % 2 == 0, // Alternate left/right alignment
+              ),
           ],
         ),
       ],
     );
   }
-}
 
-class LevelCircle extends StatelessWidget {
-  final int level;
-  final bool isCompleted;
-  final bool isActive;
-  final bool isLocked;
-  final IconData icon;
+  Widget _buildLevelRow(BuildContext context, int index, Quiz quiz,
+      {bool isLeftAligned = true}) {
+    final levelNumber = index + 1;
+    final isLocked = levelNumber > highestUnlockedLevel;
+    final isCompleted = completedLevels[levelNumber] == true;
 
-  const LevelCircle({
-    super.key,
-    required this.level,
-    this.isCompleted = false,
-    this.isActive = false,
-    this.isLocked = false,
-    required this.icon,
-  });
+    // Choose icon based on quiz status
+    IconData icon;
+    if (isLocked) {
+      icon = Icons.lock;
+    } else if (isCompleted) {
+      icon = Icons.check_circle;
+    } else {
+      icon = Icons.quiz;
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    // Set circle color based on status
+    Color circleColor;
+    if (isLocked) {
+      circleColor = themeProvider.isDarkMode
+          ? Colors.grey.shade700
+          : Colors.grey.shade400;
+    } else if (isCompleted) {
+      circleColor = Colors.green.withOpacity(0.7);
+    } else if (levelNumber == highestUnlockedLevel) {
+      circleColor = themeProvider.primaryColor;
+    } else {
+      circleColor = themeProvider.accentColor.withOpacity(0.7);
+    }
 
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        color: isActive
-            ? themeProvider.cardColor
-            : themeProvider.isDarkMode
-                ? Colors.grey.shade700
-                : Colors.grey.shade400,
-        shape: BoxShape.circle,
-        border: isActive
-            ? Border.all(color: themeProvider.primaryColor, width: 4)
-            : null,
-        boxShadow: isActive
-            ? [
-                BoxShadow(
-                  color: themeProvider.primaryColor.withOpacity(0.3),
-                  blurRadius: 8,
-                  spreadRadius: 2,
-                )
-              ]
-            : null,
-      ),
-      child: Center(
-        child: Icon(
-          icon,
-          color: isActive ? themeProvider.primaryColor : Colors.white,
-          size: 28,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (!isLeftAligned) const SizedBox(width: 80),
+        GestureDetector(
+          onTap: isLocked ? null : () => onLevelSelected(quiz, levelNumber),
+          child: Column(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: circleColor,
+                  shape: BoxShape.circle,
+                  border: levelNumber == highestUnlockedLevel
+                      ? Border.all(color: themeProvider.primaryColor, width: 4)
+                      : null,
+                  boxShadow: levelNumber == highestUnlockedLevel
+                      ? [
+                          BoxShadow(
+                            color: themeProvider.primaryColor.withOpacity(0.3),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          )
+                        ]
+                      : null,
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Level icon
+                    Icon(
+                      icon,
+                      color:
+                          (levelNumber == highestUnlockedLevel && !isCompleted)
+                              ? Colors.white
+                              : Colors.white,
+                      size: 28,
+                    ),
+
+                    // Level number indicator at the bottom
+                    Positioned(
+                      bottom: 2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isLocked
+                              ? Colors.grey.shade600
+                              : themeProvider.primaryColor,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$levelNumber',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (!isLocked)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: themeProvider.cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isCompleted
+                          ? Colors.green
+                          : themeProvider.dividerColor,
+                    ),
+                  ),
+                  child: Text(
+                    isCompleted ? "100% Score" : "Quiz ${levelNumber}",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color:
+                          isCompleted ? Colors.green : themeProvider.textColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
-      ),
+        if (isLeftAligned) const SizedBox(width: 80),
+      ],
     );
   }
 }

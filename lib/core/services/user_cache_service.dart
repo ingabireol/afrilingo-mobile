@@ -463,14 +463,81 @@ class UserCacheService {
   static Future<void> cacheProfilePicture(String? profilePicture) async {
     if (profilePicture == null || profilePicture.isEmpty) return;
 
-    // Update user identity if it exists
-    final identity = await getCurrentUserIdentity();
-    if (identity != null) {
-      await updateUserIdentityField('profilePicture', profilePicture);
+    // Validate the URL to ensure it's properly formatted
+    String? validatedPicture = profilePicture;
+
+    try {
+      // If it's a base64 image, make sure it has the proper prefix
+      if (profilePicture.length > 100 &&
+          !profilePicture.startsWith('http') &&
+          !profilePicture.startsWith('data:image')) {
+        validatedPicture = 'data:image/jpeg;base64,$profilePicture';
+      }
+      // If it starts with %22 (encoded quote), fix it
+      else if (profilePicture.startsWith('%22')) {
+        // Remove the encoded quotes at the beginning and end
+        validatedPicture =
+            profilePicture.replaceFirst('%22', '').replaceAll('%22', '');
+
+        // Ensure it has a proper scheme
+        if (!validatedPicture.startsWith('http')) {
+          validatedPicture = 'https://$validatedPicture';
+        }
+      }
+      // If it's a URL, make sure it has a scheme
+      else if (!profilePicture.startsWith('data:') &&
+          !profilePicture.startsWith('http')) {
+        // Safely handle the URL without creating invalid IPv6 addresses
+        if (profilePicture.startsWith('//')) {
+          validatedPicture = 'https:$profilePicture';
+        } else {
+          validatedPicture = 'https://$profilePicture';
+        }
+      }
+
+      // Update user identity if it exists
+      final identity = await getCurrentUserIdentity();
+      if (identity != null) {
+        await updateUserIdentityField('profilePicture', validatedPicture);
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_profilePictureKey, validatedPicture);
+      print(
+          'Cached profile picture: ${validatedPicture.startsWith('data:') ? 'Base64 image' : validatedPicture}');
+    } catch (e) {
+      print('Error caching profile picture: $e');
+      // If there's any error in URL formatting, use a UI Avatars URL as fallback
+      final initials = await _getUserInitials();
+      final fallbackUrl =
+          'https://ui-avatars.com/api/?name=$initials&background=random';
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_profilePictureKey, fallbackUrl);
+      print('Using fallback avatar URL due to error: $fallbackUrl');
+
+      // Also update the user identity
+      final identity = await getCurrentUserIdentity();
+      if (identity != null) {
+        await updateUserIdentityField('profilePicture', fallbackUrl);
+      }
+    }
+  }
+
+  // Helper method to get user initials for avatar generation
+  static Future<String> _getUserInitials() async {
+    final firstName = await getCachedFirstName();
+    final lastName = await getCachedLastName();
+
+    String initials = '';
+    if (firstName.isNotEmpty) {
+      initials += firstName[0];
+    }
+    if (lastName.isNotEmpty) {
+      initials += lastName[0];
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_profilePictureKey, profilePicture);
+    return initials.isNotEmpty ? initials : 'U';
   }
 
   /// Cache streak value separately for quick access

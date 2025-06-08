@@ -108,7 +108,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   bool _isApiInitialized = false;
   bool _isSending = false;
   final ScrollController _scrollController = ScrollController();
-  final String _modelName = "Mixtral 8x7B";
+  final String _modelName = "Claude-3 Haiku";
 
   // Animation controller
   late AnimationController _animationController;
@@ -147,18 +147,11 @@ class _ChatbotScreenState extends State<ChatbotScreen>
   }
 
   Future<void> _initializeDeepSeek() async {
-    setState(() {
-      _isLoading = true;
-      _isApiInitialized = false;
-    });
-
     try {
-      _messages.clear();
-      _messages.add(const ChatMessage(
-        text:
-            'Initializing Mixtral 8x7B AI model for improved Kinyarwanda conversation...',
-        isUser: false,
-      ));
+      setState(() {
+        _isLoading = true;
+        _isApiInitialized = false;
+      });
 
       // Try to get API key from preferences first
       String? apiKey = await DeepSeekService.getApiKey();
@@ -175,8 +168,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
 
       // If we have a valid API key, initialize the service
       if (apiKey != null && apiKey.isNotEmpty && apiKey.startsWith('sk-')) {
-        _deepSeekService =
-            DeepSeekService(apiKey, 'mistralai/mixtral-8x7b-instruct');
+        _deepSeekService = DeepSeekService(apiKey, 'anthropic/claude-3-haiku');
         setState(() {
           _isLoading = false;
           _isApiInitialized = true;
@@ -186,6 +178,15 @@ class _ChatbotScreenState extends State<ChatbotScreen>
       }
 
       // No valid API key found, show dialog
+      setState(() {
+        _isLoading = false;
+        if (_messages.isNotEmpty) _messages.removeLast();
+        _messages.add(ChatMessage(
+          text: 'API key not found or invalid',
+          isUser: false,
+          isError: true,
+        ));
+      });
       _showApiKeyInputDialog();
     } catch (e) {
       setState(() {
@@ -223,7 +224,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Please enter your OpenRouter API key to use the Mixtral 8x7B model for enhanced Kinyarwanda conversations.',
+                'Please enter your OpenRouter API key to use the Claude-3 Haiku model for enhanced Kinyarwanda conversations.',
                 style: TextStyle(
                   color: themeProvider.textColor,
                 ),
@@ -245,7 +246,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'The Mixtral 8x7B model provides more natural conversations in Kinyarwanda.',
+                'Claude-3 Haiku provides more natural and accurate conversations in Kinyarwanda.',
                 style: TextStyle(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
@@ -494,7 +495,7 @@ class _ChatbotScreenState extends State<ChatbotScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'This chatbot uses the Mixtral 8x7B model to provide natural conversations in Kinyarwanda.',
+              'This chatbot uses the Claude-3 Haiku model to provide natural conversations in Kinyarwanda.',
               style: TextStyle(color: themeProvider.textColor),
             ),
             const SizedBox(height: 12),

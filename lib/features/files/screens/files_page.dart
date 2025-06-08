@@ -5,6 +5,11 @@ import 'package:afrilingo/core/theme/theme_provider.dart';
 import 'package:afrilingo/features/exercises/screens/foodanddrinks.dart';
 import 'package:afrilingo/features/auth/widgets/navigation_bar.dart';
 import 'package:afrilingo/utils/app_theme.dart';
+import 'package:afrilingo/features/lessons/services/lesson_service.dart';
+import 'package:afrilingo/features/lessons/screens/lesson.dart';
+import 'package:afrilingo/features/lessons/models/lesson.dart';
+import 'package:afrilingo/features/courses/models/course.dart';
+import 'package:afrilingo/features/language/models/language.dart';
 
 // African-inspired color palette
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
@@ -30,12 +35,110 @@ class _FilesPageState extends State<FilesPage>
   late TabController _tabController;
   final String _username = 'buntu Levy Caleb';
   final String _language = 'Kinyarwanda';
+  final LessonService _lessonService = LessonService();
+
+  // State variables for dynamic categories
+  List<Map<String, dynamic>> _categories = [];
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(
         length: 3, vsync: this, initialIndex: widget.initialTabIndex);
+    _loadCategories();
+  }
+
+  // Load lesson categories from the server
+  Future<void> _loadCategories() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final categories = await _lessonService.getLessonTypes();
+
+      setState(() {
+        _categories = categories;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+        // Use default categories if there's an error
+        _categories = _lessonService.getDefaultCategories();
+      });
+    }
+  }
+
+  // Navigate to lessons of a specific type
+  Future<void> _navigateToLessonsByType(String lessonType) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Get lessons by type
+      final lessons = await _lessonService.getLessonsByType(lessonType);
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (lessons.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No lessons found for this category yet'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+
+      // Navigate to the first lesson in this category
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LessonScreen(
+            lessons: lessons,
+            // Create a mock course object with just the essential information
+            course: Course(
+              id: 1,
+              title: 'Category Lessons',
+              description: 'Lessons by category',
+              image: '',
+              language: Language(
+                id: 1,
+                name: 'Kinyarwanda',
+                code: 'rw',
+                description: 'The language of Rwanda',
+                flagImage: '',
+              ),
+              difficulty: 'Beginner',
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading lessons: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -106,7 +209,11 @@ class _FilesPageState extends State<FilesPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildGridSection(themeProvider),
+          _isLoading
+              ? _buildLoadingIndicator(themeProvider)
+              : _error != null
+                  ? _buildErrorState(themeProvider)
+                  : _buildGridSection(themeProvider),
           _buildEmptyTab('No created files yet.', themeProvider),
           _buildEmptyTab('No saved files yet.', themeProvider),
         ],
@@ -122,39 +229,63 @@ class _FilesPageState extends State<FilesPage>
     );
   }
 
-  Widget _buildGridSection(ThemeProvider themeProvider) {
-    final List<Map<String, dynamic>> categories = [
-      {'title': 'Colors', 'icon': Icons.palette, 'color': Colors.red.shade300},
-      {
-        'title': 'Numbers',
-        'icon': Icons.numbers,
-        'color': Colors.blue.shade300
-      },
-      {
-        'title': 'Body parts',
-        'icon': Icons.accessibility_new,
-        'color': Colors.green.shade300
-      },
-      {
-        'title': 'Food & Drinks',
-        'icon': Icons.fastfood,
-        'color': Colors.orange.shade300,
-        'isSelected': true
-      },
-      {'title': 'Beauty', 'icon': Icons.face, 'color': Colors.purple.shade300},
-      {
-        'title': 'Clothes',
-        'icon': Icons.checkroom,
-        'color': Colors.teal.shade300
-      },
-      {'title': 'Animals', 'icon': Icons.pets, 'color': Colors.brown.shade300},
-      {
-        'title': 'Family',
-        'icon': Icons.family_restroom,
-        'color': Colors.indigo.shade300
-      },
-    ];
+  Widget _buildLoadingIndicator(ThemeProvider themeProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: themeProvider.primaryColor),
+          const SizedBox(height: 16),
+          Text(
+            'Loading categories...',
+            style: TextStyle(
+              color: themeProvider.textColor,
+              fontSize: 16,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildErrorState(ThemeProvider themeProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load categories',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: themeProvider.textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _error ?? 'Unknown error',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: themeProvider.lightTextColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _loadCategories,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themeProvider.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Try Again'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGridSection(ThemeProvider themeProvider) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -189,33 +320,20 @@ class _FilesPageState extends State<FilesPage>
               mainAxisSpacing: 16,
               childAspectRatio: 1.4,
             ),
-            itemCount: categories.length,
+            itemCount: _categories.length,
             itemBuilder: (context, index) {
-              final category = categories[index];
-              final bool isSelected = category['isSelected'] == true;
+              final category = _categories[index];
 
               return _buildCategoryCard(
                 title: category['title'],
                 icon: category['icon'],
                 color: category['color'],
-                isSelected: isSelected,
+                isSelected:
+                    false, // We could track selected categories if needed
                 themeProvider: themeProvider,
                 onTap: () {
-                  if (category['title'] == 'Food & Drinks') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const FoodAndDrinks()),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content:
-                            Text('${category['title']} category coming soon'),
-                        backgroundColor: themeProvider.primaryColor,
-                      ),
-                    );
-                  }
+                  // Navigate to lessons of this type
+                  _navigateToLessonsByType(category['type']);
                 },
               );
             },
@@ -279,7 +397,7 @@ class _FilesPageState extends State<FilesPage>
               ),
               const SizedBox(height: 4),
               Text(
-                '25 words',
+                'Tap to explore',
                 style: TextStyle(
                   fontSize: 12,
                   color: themeProvider.lightTextColor,

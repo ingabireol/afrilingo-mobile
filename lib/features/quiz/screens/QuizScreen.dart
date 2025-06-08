@@ -109,10 +109,12 @@ class QuizStartScreen extends StatelessWidget {
 
 class QuizScreen extends StatefulWidget {
   final int lessonId;
+  final bool isLevelProgressionMode;
 
   const QuizScreen({
     super.key,
     required this.lessonId,
+    this.isLevelProgressionMode = false,
   });
 
   @override
@@ -181,51 +183,6 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
-  void _handleSubmissionError() {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: themeProvider.cardColor,
-        title: Text(
-          'Error Submitting Quiz',
-          style: TextStyle(
-            color: themeProvider.primaryColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'There was a problem submitting your quiz. Would you like to try again or return to your lesson?',
-          style: TextStyle(color: themeProvider.textColor),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              _submitQuiz(); // Try again
-            },
-            child: Text(
-              'Try Again',
-              style: TextStyle(color: themeProvider.primaryColor),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: themeProvider.primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Back to lesson
-            },
-            child: const Text('Back to Lesson'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _submitQuiz() async {
     if (_quiz == null) return;
 
@@ -266,26 +223,93 @@ class _QuizScreenState extends State<QuizScreen> {
         }
       }
     } catch (e) {
-      // Extract a more user-friendly error message
-      String errorMessage = e.toString();
+      // Create a user-friendly error message
+      String userFriendlyMessage =
+          'There was a problem submitting your quiz. Please try again.';
 
-      // If there's a specific error about encoding/converting, show a simpler message
-      if (errorMessage.contains('Converting object') ||
-          errorMessage.contains('encodable object') ||
-          errorMessage.contains('Map len') ||
-          errorMessage.contains('parse error')) {
-        errorMessage =
-            'There was a problem submitting your quiz. Please try again.';
+      // Map specific technical errors to user-friendly messages
+      if (e.toString().contains('Converting object') ||
+          e.toString().contains('encodable object') ||
+          e.toString().contains('Map len') ||
+          e.toString().contains('parse error')) {
+        userFriendlyMessage =
+            'There was a problem processing your answers. Your progress has been saved.';
+      } else if (e.toString().contains('connection') ||
+          e.toString().contains('socket') ||
+          e.toString().contains('network') ||
+          e.toString().contains('timeout')) {
+        userFriendlyMessage =
+            'Network connection issue. Please check your internet connection and try again.';
       }
 
       setState(() {
-        _error = errorMessage;
+        _error = userFriendlyMessage;
         _isLoading = false;
       });
 
       // Show error dialog with retry option
       _handleSubmissionError();
     }
+  }
+
+  void _handleSubmissionError() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: themeProvider.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Quiz Submission',
+          style: TextStyle(
+            color: themeProvider.primaryColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.info_outline, size: 48, color: Colors.orange),
+            const SizedBox(height: 16),
+            Text(
+              _error ?? 'There was a problem submitting your quiz.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: themeProvider.textColor,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              _submitQuiz(); // Try again
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: themeProvider.primaryColor,
+            ),
+            child: const Text('Try Again'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themeProvider.primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pop(context); // Back to lesson
+            },
+            child: const Text('Back to Lesson'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _restartQuiz() {
@@ -328,7 +352,7 @@ class _QuizScreenState extends State<QuizScreen> {
       return Scaffold(
         backgroundColor: themeProvider.backgroundColor,
         appBar: AppBar(
-          title: const Text('Error'),
+          title: const Text('Quiz'),
           backgroundColor: themeProvider.primaryColor,
           foregroundColor: Colors.white,
         ),
@@ -338,10 +362,18 @@ class _QuizScreenState extends State<QuizScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.warning_amber_rounded,
+                      size: 64, color: Colors.orange),
+                ),
                 const SizedBox(height: 24),
                 Text(
-                  'An error occurred',
+                  'Something went wrong',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -358,18 +390,39 @@ class _QuizScreenState extends State<QuizScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                ElevatedButton(
-                  onPressed: _loadQuiz,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeProvider.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: _loadQuiz,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeProvider.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: const Text('Try Again'),
                     ),
-                  ),
-                  child: const Text('Retry'),
+                    const SizedBox(width: 16),
+                    OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(context); // Go back to lesson
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: themeProvider.primaryColor,
+                        side: BorderSide(color: themeProvider.primaryColor),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: const Text('Back to Lesson'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -442,81 +495,286 @@ class _QuizScreenState extends State<QuizScreen> {
           backgroundColor: themeProvider.primaryColor,
           foregroundColor: Colors.white,
         ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Header section with congratulations and score
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                decoration: BoxDecoration(
+                  color: _quizResult!.passed
+                      ? Colors.green.withOpacity(0.1)
+                      : Colors.orange.withOpacity(0.1),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: _quizResult!.passed
+                            ? Colors.green.withOpacity(0.2)
+                            : Colors.orange.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _quizResult!.passed
+                            ? Icons.check_circle
+                            : Icons.emoji_events,
+                        size: 80,
+                        color: _quizResult!.passed
+                            ? Colors.green
+                            : Colors.orange[700],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      _quizResult!.passed ? 'Congratulations!' : 'Good effort!',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: _quizResult!.passed
+                            ? Colors.green[700]
+                            : Colors.orange[700],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _quizResult!.passed
+                            ? Colors.green.withOpacity(0.2)
+                            : Colors.orange.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Your score: ${_quizResult!.score}%',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _quizResult!.passed
+                              ? Colors.green[700]
+                              : Colors.orange[700],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _quizResult!.passed
+                          ? 'You\'ve successfully completed this quiz!'
+                          : 'Keep practicing to improve your score.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: themeProvider.textColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Results summary and buttons
+              Expanded(
+                child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color:
-                        _quizResult!.passed ? Colors.green[50] : Colors.red[50],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _quizResult!.passed ? Icons.check_circle : Icons.cancel,
-                    size: 80,
-                    color: _quizResult!.passed ? Colors.green : Colors.red[400],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Results summary
+                      if (_quiz != null && _quizResult!.results.isNotEmpty)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Results Summary',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: themeProvider.textColor,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            ...List.generate(
+                              _quizResult!.results.length,
+                              (index) {
+                                final result = _quizResult!.results[index];
+                                // Try to find matching question for better display
+                                String questionText = "Question ${index + 1}";
+                                if (_quiz!.questions
+                                    .any((q) => q.id == result.questionId)) {
+                                  final question = _quiz!.questions.firstWhere(
+                                    (q) => q.id == result.questionId,
+                                  );
+                                  questionText = question.question;
+                                }
+
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  elevation: 2,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: BorderSide(
+                                      color: result.correct
+                                          ? Colors.green.withOpacity(0.5)
+                                          : Colors.red.withOpacity(0.5),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              result.correct
+                                                  ? Icons.check_circle
+                                                  : Icons.cancel,
+                                              color: result.correct
+                                                  ? Colors.green
+                                                  : Colors.red,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                questionText,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      themeProvider.textColor,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        const Divider(),
+                                        const SizedBox(height: 8),
+                                        if (result.userAnswer != null)
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.person,
+                                                color: themeProvider
+                                                    .lightTextColor,
+                                                size: 16,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Your answer: ${result.userAnswer}',
+                                                style: TextStyle(
+                                                  color:
+                                                      themeProvider.textColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        if (!result.correct)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 8),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.check,
+                                                  color: Colors.green,
+                                                  size: 16,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  'Correct answer: ${result.correctAnswer}',
+                                                  style: const TextStyle(
+                                                    color: Colors.green,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 32),
-                Text(
-                  _quizResult!.passed ? 'Congratulations!' : 'Keep practicing!',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: _quizResult!.passed ? Colors.green : Colors.red[400],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _quizResult!.passed
-                        ? Colors.green[100]
-                        : Colors.red[100],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Your score: ${_quizResult!.score}%',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: _quizResult!.passed
-                          ? Colors.green[800]
-                          : Colors.red[800],
+              ),
+
+              // Action buttons
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: themeProvider.cardColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      offset: const Offset(0, -3),
+                      blurRadius: 6,
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 48),
-                ElevatedButton(
-                  onPressed: _restartQuiz,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeProvider.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          // Check which mode we're in
+                          if (widget.isLevelProgressionMode) {
+                            // Return the score to the level selection screen
+                            Navigator.pop(context, {
+                              'score': _quizResult!.score,
+                              'passed': _quizResult!.passed,
+                            });
+                          } else {
+                            // Original behavior for normal learning flow
+                            Navigator.pop(context);
+                          }
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: themeProvider.primaryColor,
+                          side: BorderSide(color: themeProvider.primaryColor),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        // Show different text based on mode
+                        child: Text(widget.isLevelProgressionMode
+                            ? 'Complete Quiz'
+                            : 'Back to Lesson'),
+                      ),
                     ),
-                  ),
-                  child: const Text('Try Again'),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _restartQuiz,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: themeProvider.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text('Try Again'),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: themeProvider.primaryColor,
-                  ),
-                  child: const Text('Back to Lesson'),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );

@@ -53,7 +53,9 @@ class GoogleAuthServiceNew {
         const Duration(seconds: 15),
         onTimeout: () {
           print('Backend request timed out');
-          return http.Response('{"message":"Request timed out"}', 408);
+          return http.Response(
+              '{"message":"Connection timed out. Please check your internet connection and try again."}',
+              408);
         },
       );
 
@@ -76,7 +78,7 @@ class GoogleAuthServiceNew {
             print("Warning: No token in backend response");
             return {
               'success': false,
-              'message': 'No authentication token received'
+              'message': 'Authentication failed. Please try again later.'
             };
           }
 
@@ -130,15 +132,22 @@ class GoogleAuthServiceNew {
           print("Error parsing backend response: $e");
           return {
             'success': false,
-            'message': 'Error processing server response: $e',
+            'message': 'Unable to complete sign-in. Please try again later.',
           };
         }
       } else {
         // Handle error responses
-        String errorMessage = 'Authentication failed';
+        String errorMessage = 'Authentication failed. Please try again.';
         try {
           final errorData = json.decode(response.body);
           errorMessage = errorData['message'] ?? errorMessage;
+
+          // Convert technical error messages to user-friendly ones
+          if (errorMessage.contains('Connection refused') ||
+              errorMessage.contains('refused') ||
+              errorMessage.contains('10.0.2.2')) {
+            errorMessage = 'Cannot connect to server. Please try again later.';
+          }
         } catch (e) {
           print("Could not parse error response: $e");
         }
@@ -148,7 +157,24 @@ class GoogleAuthServiceNew {
       }
     } catch (e) {
       print("Google Sign-In error: $e");
-      return {'success': false, 'message': "Google Sign-In error: $e"};
+
+      // Create user-friendly error message
+      String userFriendlyMessage = "Sign in failed. Please try again.";
+
+      if (e.toString().contains('network') ||
+          e.toString().contains('socket') ||
+          e.toString().contains('connection')) {
+        userFriendlyMessage =
+            "Network error. Please check your internet connection.";
+      } else if (e.toString().contains('canceled') ||
+          e.toString().contains('cancelled')) {
+        userFriendlyMessage = "Sign in was canceled.";
+      } else if (e.toString().contains('credentials')) {
+        userFriendlyMessage =
+            "Google sign-in failed. Please try again or use email login.";
+      }
+
+      return {'success': false, 'message': userFriendlyMessage};
     }
   }
 

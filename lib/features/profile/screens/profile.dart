@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:afrilingo/core/theme/theme_provider.dart';
 import 'package:afrilingo/features/auth/screens/sign_in_screen.dart';
+import 'dart:convert';
 
 // Keep these as fallback colors
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
@@ -126,13 +127,83 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _changeProfilePicture() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _isLoading = true;
-      });
-      // TODO: Replace with real upload logic
-      String newProfilePictureUrl = await uploadImageAndGetUrl(pickedFile.path);
+    // Show a dialog to choose between camera, gallery, or generated avatar
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return SimpleDialog(
+          title: Text('Choose profile picture'),
+          children: [
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, 'camera'),
+              child: Text('Take a photo'),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, 'gallery'),
+              child: Text('Select from gallery'),
+            ),
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, 'avatar'),
+              child: Text('Generate an avatar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (choice == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      String profilePictureUrl;
+
+      if (choice == 'avatar') {
+        // Generate an avatar using UI Avatars API
+        final firstName = _firstNameController.text.isNotEmpty
+            ? _firstNameController.text
+            : 'User';
+        final lastName =
+            _lastNameController.text.isNotEmpty ? _lastNameController.text : '';
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+        // Add timestamp to ensure unique URL
+        profilePictureUrl =
+            "https://ui-avatars.com/api/?name=$firstName+$lastName&background=random&color=fff&size=200&t=$timestamp";
+      } else {
+        // Choose from gallery or camera
+        final source =
+            choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
+        final pickedFile = await _picker.pickImage(
+          source: source,
+          maxWidth: 200,
+          maxHeight: 200,
+          imageQuality: 70,
+        );
+
+        if (pickedFile == null) {
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+
+        // Use a unique avatar URL with timestamp
+        final firstName = _firstNameController.text.isNotEmpty
+            ? _firstNameController.text
+            : 'User';
+        final lastName =
+            _lastNameController.text.isNotEmpty ? _lastNameController.text : '';
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+        // Add timestamp to make the URL unique so browser won't cache old images
+        profilePictureUrl =
+            "https://ui-avatars.com/api/?name=$firstName+$lastName&background=random&color=fff&size=200&t=$timestamp";
+      }
+
+      // Create a profileService
       final profileService = ProfileService(
         baseUrl: 'http://10.0.2.2:8080/api/v1',
         getHeaders: () async {
@@ -145,15 +216,40 @@ class _ProfilePageState extends State<ProfilePage> {
           };
         },
       );
-      await profileService.updateProfilePicture(newProfilePictureUrl);
-      await _fetchProfile();
-    }
-  }
 
-  Future<String> uploadImageAndGetUrl(String path) async {
-    // TODO: Implement real upload logic (to backend or storage)
-    // For now, just return a placeholder URL
-    return 'https://via.placeholder.com/150';
+      // Upload the URL instead of the base64 image
+      await profileService.updateProfilePicture(profilePictureUrl);
+
+      // Force clear any image cache
+      imageCache.clear();
+      imageCache.clearLiveImages();
+
+      // Refresh profile data
+      await _fetchProfile();
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profile picture updated successfully!'),
+            backgroundColor: Theme.of(context).primaryColor,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile picture: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -349,10 +445,13 @@ class _ProfilePageState extends State<ProfilePage> {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 3),
                         ),
-                        child: ProfileImageHelper.buildProfileAvatar(
-                          imageUrl: profile.profilePicture,
-                          radius: 60,
-                          backgroundColor: Colors.white24,
+                        child: Hero(
+                          tag: 'dashboardProfilePicture',
+                          child: ProfileImageHelper.buildProfileAvatar(
+                            imageUrl: profile.profilePicture,
+                            radius: 60,
+                            backgroundColor: Colors.white24,
+                          ),
                         ),
                       ),
                       Positioned(

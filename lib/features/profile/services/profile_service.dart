@@ -377,18 +377,30 @@ class ProfileService {
   }
 
   // Update Profile Picture
-  Future<bool> updateProfilePicture(String pictureUrl) async {
+  Future<bool> updateProfilePicture(String imageData) async {
     try {
       final headers = await getHeaders();
 
-      print("Sending profile picture update request with URL: $pictureUrl");
+      // Check if the image is already a URL or a base64 string
+      final bool isBase64 = !imageData.startsWith('http');
+
+      print(
+          "Sending profile picture update request: ${isBase64 ? 'Base64 image' : 'URL: $imageData'}");
+
+      // Format the request based on backend expectations
+      // The backend expects either a URL string or a base64 string with prefix
+      final String formattedImage = isBase64
+          ? (imageData.startsWith('data:image')
+              ? imageData
+              : 'data:image/jpeg;base64,$imageData')
+          : imageData;
 
       final response = await http
           .put(
             Uri.parse('$baseUrl/profile/picture'),
             headers: headers,
-            body: json.encode(
-                pictureUrl), // Send raw string as expected by the backend
+            body: json
+                .encode(formattedImage), // Send properly formatted image data
           )
           .timeout(_timeout);
 
@@ -822,17 +834,62 @@ class ProfileService {
   }
 
   // Add a dedicated method to get streak data
-  Future<int> getUserStreak() async {
+  Future<int> getUserStreak({bool forceRefresh = false}) async {
     try {
-      // First try to get cached streak for immediate display
-      final cachedStreak = await UserCacheService.getCachedStreak();
+      // Always get from server if forceRefresh is true
+      if (forceRefresh) {
+        final headers = await getHeaders();
+        int streak = 0;
 
-      // If we have a cached streak, use it while we fetch the latest
-      int streak = cachedStreak;
+        // Try the dedicated streak endpoint
+        try {
+          print(
+              "Getting streak from dedicated streak endpoint (forced refresh)");
+          final streakResponse = await http
+              .get(Uri.parse('$baseUrl/progress/streak'), headers: headers)
+              .timeout(_timeout);
+
+          if (streakResponse.statusCode == 200) {
+            final data = json.decode(streakResponse.body);
+            final responseData = data['data'] ?? data;
+
+            if (responseData is Map && responseData.containsKey('streak')) {
+              final fetchedStreak = responseData['streak'];
+              if (fetchedStreak is int || fetchedStreak is double) {
+                streak = fetchedStreak is int
+                    ? fetchedStreak
+                    : fetchedStreak.toInt();
+                // Cache the latest streak value
+                await UserCacheService.cacheStreak(streak);
+                print(
+                    "Got streak from dedicated endpoint (forced refresh): $streak");
+                return streak;
+              }
+            }
+          } else {
+            print("Streak endpoint failed: ${streakResponse.statusCode}");
+          }
+        } catch (e) {
+          print("Error getting streak from dedicated endpoint: $e");
+        }
+
+        // If all methods fail, return 0
+        return 0;
+      }
+
+      // Regular flow - try cache first then server
+      // Skip cache if force refresh is requested
+      final cachedStreak = await UserCacheService.getCachedStreak();
+      // If we have a valid cached streak, use it
+      if (cachedStreak > 0) {
+        print("Using cached streak: $cachedStreak");
+        return cachedStreak;
+      }
 
       final headers = await getHeaders();
+      int streak = 0;
 
-      // Try using the dedicated streak endpoint first - this is now the preferred method
+      // ONLY use the dedicated streak endpoint - this is the most accurate
       try {
         print("Getting streak from dedicated streak endpoint");
         final streakResponse = await http
@@ -859,36 +916,6 @@ class ProfileService {
         }
       } catch (e) {
         print("Error getting streak from dedicated endpoint: $e");
-      }
-
-      // Try using the dashboard endpoint as fallback
-      try {
-        print("Getting streak from dashboard endpoint");
-        final dashboardResponse = await http
-            .get(Uri.parse('$baseUrl/dashboard'), headers: headers)
-            .timeout(_timeout);
-
-        if (dashboardResponse.statusCode == 200) {
-          final data = json.decode(dashboardResponse.body);
-          final dashboardData = data['data'] ?? data;
-
-          if (dashboardData.containsKey('learningStats') &&
-              dashboardData['learningStats'] != null &&
-              dashboardData['learningStats'].containsKey('streak')) {
-            final fetchedStreak = dashboardData['learningStats']['streak'];
-            if (fetchedStreak is int) {
-              streak = fetchedStreak;
-              // Cache the latest streak value
-              await UserCacheService.cacheStreak(streak);
-              print("Got streak from dashboard: $streak");
-              return streak;
-            }
-          }
-        } else {
-          print("Dashboard endpoint failed: ${dashboardResponse.statusCode}");
-        }
-      } catch (e) {
-        print("Error getting streak from dashboard: $e");
       }
 
       // If we have a cached streak, return it

@@ -30,7 +30,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
       case 2:
         return const TranslationScreen();
       case 3:
-        return const LevelSelectionScreen();
+        return const LevelSelectionScreen(courseId: 1);
       case 4:
         return const ProfilePage();
       default:

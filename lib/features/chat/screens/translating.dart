@@ -36,7 +36,7 @@ class _TranslationScreenState extends State<TranslationScreen>
   bool _isInitialized = false;
   DeepSeekService? _deepSeekService;
   String? _initError;
-  final String _modelName = "Mixtral 8x7B";
+  final String _modelName = "Claude-3 Haiku";
 
   // Animation controller
   late AnimationController _animationController;
@@ -94,8 +94,7 @@ class _TranslationScreenState extends State<TranslationScreen>
 
       // If we have a valid API key, initialize the service
       if (apiKey != null && apiKey.isNotEmpty && apiKey.startsWith('sk-')) {
-        _deepSeekService =
-            DeepSeekService(apiKey, 'mistralai/mixtral-8x7b-instruct');
+        _deepSeekService = DeepSeekService(apiKey, 'anthropic/claude-3-haiku');
         setState(() {
           _isInitialized = true;
         });
@@ -138,7 +137,7 @@ class _TranslationScreenState extends State<TranslationScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Please enter your OpenRouter API key to use the Mixtral 8x7B translation service. '
+                'Please enter your OpenRouter API key to use the Claude-3 Haiku translation service. '
                 'You can get a key from openrouter.ai',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
@@ -158,7 +157,7 @@ class _TranslationScreenState extends State<TranslationScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'The Mixtral 8x7B model provides more accurate translations for Kinyarwanda.',
+                'Claude-3 Haiku provides more accurate and natural translations for Kinyarwanda.',
                 style: TextStyle(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,

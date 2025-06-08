@@ -21,6 +21,7 @@ dependencies:
   dart_openai: ^5.1.0
   animated_text_kit: ^4.2.2
   google_sign_in: ^6.1.6
+  cached_network_image: ^3.4.1
   # Added percent_indicator package
   # Add other dependencies here
 

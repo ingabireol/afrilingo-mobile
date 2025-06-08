@@ -280,6 +280,30 @@ class _SignInScreenState extends State<SignInScreen>
   void _showErrorDialog(String message) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
 
+    // Create a user-friendly message from technical error
+    String userFriendlyMessage = 'Unable to sign in. Please try again.';
+
+    // Handle specific error cases with friendly messages
+    if (message.toLowerCase().contains('socket') ||
+        message.toLowerCase().contains('connection') ||
+        message.toLowerCase().contains('network') ||
+        message.toLowerCase().contains('timeout')) {
+      userFriendlyMessage =
+          'Cannot connect to server. Please check your internet connection and try again.';
+    } else if (message.toLowerCase().contains('unauthorized') ||
+        message.toLowerCase().contains('invalid credentials') ||
+        message.toLowerCase().contains('password') ||
+        message.toLowerCase().contains('credentials')) {
+      userFriendlyMessage = 'Incorrect email or password. Please try again.';
+    } else if (message.toLowerCase().contains('not found') ||
+        message.toLowerCase().contains('no account')) {
+      userFriendlyMessage =
+          'Account not found. Please check your email or create a new account.';
+    } else if (message.toLowerCase().contains('google')) {
+      userFriendlyMessage =
+          'Google sign-in failed. Please try again or use email login.';
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -298,7 +322,8 @@ class _SignInScreenState extends State<SignInScreen>
           children: [
             Icon(Icons.error_outline, color: Colors.red, size: 28),
             const SizedBox(height: 16),
-            Text(message, style: TextStyle(color: themeProvider.textColor)),
+            Text(userFriendlyMessage,
+                style: TextStyle(color: themeProvider.textColor, fontSize: 16)),
           ],
         ),
         actions: [
