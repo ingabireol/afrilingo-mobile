@@ -1,6 +1,6 @@
 # Afrilingo
 
-Afrilingo is a Flutter application designed for [brief description of the app's purpose, e.g., language learning, translation, etc.]. This README provides an overview of the project, setup instructions, and usage guidelines.
+Afrilingo is a Flutter application designed for language learning and translation. This README provides an overview of the project, detailed functionalities, setup instructions, and usage guidelines.
 
 ## Table of Contents
 
@@ -15,9 +15,32 @@ Afrilingo is a Flutter application designed for [brief description of the app's 
 
 ## Features
 
-- User authentication (sign in, sign up)
-- Profile management (update profile picture, user roles)
-- [List other key features of the app]
+### Authentication
+- **Sign In**: Users can log in using their email and password.
+- **Sign Up**: New users can create an account with email and password.
+- **Google Authentication**: Users can sign in using their Google account.
+- **Role Management**: User roles are assigned during authentication (e.g., "ROLE_USER").
+
+### Profile Management
+- **Profile Setup**: Users can set up their profiles, including personal information.
+- **Profile Picture Update**: Users can upload and update their profile pictures.
+- **Role Display**: Users can view their assigned roles within the application.
+
+### Quiz Functionality
+- **Quiz Creation**: Users can create quizzes with multiple-choice questions.
+- **Quiz Taking**: Users can take quizzes with a timer and receive immediate feedback.
+- **Score Tracking**: Users can view their scores and performance on quizzes.
+
+### Dashboard
+- **User Dashboard**: A personalized dashboard displaying user statistics, recent activities, and quick access to features.
+- **Lesson Content**: Users can access lesson materials and resources.
+
+### Chatbot Integration
+- **Chatbot Interaction**: Users can interact with a chatbot for language practice and assistance.
+
+### Additional Features
+- **Lesson Management**: Users can manage and track their lessons.
+- **Completion Tracking**: Users can see their progress and completed tasks.
 
 ## Installation
 
@@ -45,6 +68,8 @@ To get started with Afrilingo, follow these steps:
 
 - **Sign In / Sign Up**: Users can create an account or log in using their credentials.
 - **Profile Management**: Users can update their profile information, including profile pictures and roles.
+- **Take Quizzes**: Users can participate in quizzes and track their scores.
+- **Access Dashboard**: Users can view their personalized dashboard with statistics and quick links.
 
 ## Authentication
 
@@ -73,7 +98,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 For any inquiries or issues, please contact:
 
 - Your Name - caleb levy Buntu [buntulevycaleb@gmail.com]
-- Project Link: [https://github.com/clevy11/afrilingo]
-(https://github.com/clevy11/afrilingo)
+- Project Link: [https://github.com/clevy11/afrilingo](https://github.com/clevy11/afrilingo)
 
 
