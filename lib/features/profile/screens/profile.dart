@@ -11,6 +11,8 @@ import 'package:provider/provider.dart';
 import 'package:afrilingo/core/theme/theme_provider.dart';
 import 'package:afrilingo/features/auth/screens/sign_in_screen.dart';
 import 'dart:convert';
+import 'dart:async';
+import 'dart:math' as math;
 
 // Keep these as fallback colors
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
@@ -40,12 +42,81 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _firstLanguageController =
       TextEditingController();
   bool _isSavingProfile = false;
+  String? _cachedProfilePicture;
+
+  // Learning time data
+  Map<String, int> _learningTime = {
+    'today': 0,
+    'week': 0,
+    'month': 0,
+    'total': 0,
+  };
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadCachedProfile();
+    _loadCachedProfilePicture();
     _fetchProfile();
+    _loadLearningTimeData();
+
+    // Set up auto-refresh timer to update data every 30 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        _loadLearningTimeData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  // Load learning time data from SharedPreferences
+  Future<void> _loadLearningTimeData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Get user ID for user-specific time tracking
+      final userId = await UserCacheService.getCachedUserId();
+      final userIdStr = userId != null ? userId.toString() : 'default';
+
+      // Use the same key prefix as in dashboard
+      const String timeTrackingKey = 'app_learning_time';
+
+      if (mounted) {
+        setState(() {
+          _learningTime = {
+            'today': prefs.getInt('${timeTrackingKey}_today_$userIdStr') ?? 0,
+            'week': prefs.getInt('${timeTrackingKey}_week_$userIdStr') ?? 0,
+            'month': prefs.getInt('${timeTrackingKey}_month_$userIdStr') ?? 0,
+            'total': prefs.getInt('${timeTrackingKey}_total_$userIdStr') ?? 0,
+          };
+        });
+      }
+    } catch (e) {
+      print('Error loading learning time data: $e');
+    }
+  }
+
+  // Format seconds into readable time
+  String _formatTime(int seconds) {
+    if (seconds < 60) {
+      return '$seconds sec';
+    } else if (seconds < 3600) {
+      return '${(seconds / 60).floor()} min';
+    } else if (seconds < 86400) {
+      final hours = (seconds / 3600).floor();
+      final minutes = ((seconds % 3600) / 60).floor();
+      return '$hours h ${minutes > 0 ? '$minutes m' : ''}';
+    } else {
+      final days = (seconds / 86400).floor();
+      final hours = ((seconds % 86400) / 3600).floor();
+      return '$days d ${hours > 0 ? '$hours h' : ''}';
+    }
   }
 
   Future<void> _loadCachedProfile() async {
@@ -59,6 +130,38 @@ class _ProfilePageState extends State<ProfilePage> {
         _firstLanguageController.text = cachedProfile.firstLanguage ?? '';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadCachedProfilePicture() async {
+    try {
+      // Try to get from SharedPreferences first (for Google accounts)
+      final prefs = await SharedPreferences.getInstance();
+      final profilePic = prefs.getString('user_photo');
+
+      if (profilePic != null && profilePic.isNotEmpty) {
+        setState(() {
+          _cachedProfilePicture = profilePic;
+        });
+        print(
+            'Loaded profile picture from SharedPreferences: ${profilePic.substring(0, 30)}...');
+      }
+
+      // Also try from UserCacheService
+      final cachedPic = await UserCacheService.getCachedProfilePicture();
+      if (cachedPic != null && cachedPic.isNotEmpty) {
+        setState(() {
+          _cachedProfilePicture = cachedPic;
+        });
+        print(
+            'Loaded profile picture from UserCacheService: ${cachedPic.substring(0, 30)}...');
+      }
+
+      if (_cachedProfilePicture == null || _cachedProfilePicture!.isEmpty) {
+        print('No cached profile picture found');
+      }
+    } catch (e) {
+      print('Error loading cached profile picture: $e');
     }
   }
 
@@ -131,20 +234,43 @@ class _ProfilePageState extends State<ProfilePage> {
     final choice = await showDialog<String>(
       context: context,
       builder: (BuildContext context) {
+        final themeProvider = Provider.of<ThemeProvider>(context);
         return SimpleDialog(
           title: Text('Choose profile picture'),
+          backgroundColor: themeProvider.cardColor,
           children: [
             SimpleDialogOption(
               onPressed: () => Navigator.pop(context, 'camera'),
-              child: Text('Take a photo'),
+              child: Row(
+                children: [
+                  Icon(Icons.camera_alt, color: themeProvider.primaryColor),
+                  const SizedBox(width: 8),
+                  Text('Take a photo',
+                      style: TextStyle(color: themeProvider.textColor)),
+                ],
+              ),
             ),
             SimpleDialogOption(
               onPressed: () => Navigator.pop(context, 'gallery'),
-              child: Text('Select from gallery'),
+              child: Row(
+                children: [
+                  Icon(Icons.photo_library, color: themeProvider.primaryColor),
+                  const SizedBox(width: 8),
+                  Text('Select from gallery',
+                      style: TextStyle(color: themeProvider.textColor)),
+                ],
+              ),
             ),
             SimpleDialogOption(
               onPressed: () => Navigator.pop(context, 'avatar'),
-              child: Text('Generate an avatar'),
+              child: Row(
+                children: [
+                  Icon(Icons.account_circle, color: themeProvider.primaryColor),
+                  const SizedBox(width: 8),
+                  Text('Generate an avatar',
+                      style: TextStyle(color: themeProvider.textColor)),
+                ],
+              ),
             ),
           ],
         );
@@ -178,9 +304,9 @@ class _ProfilePageState extends State<ProfilePage> {
             choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
         final pickedFile = await _picker.pickImage(
           source: source,
-          maxWidth: 200,
-          maxHeight: 200,
-          imageQuality: 70,
+          maxWidth: 600,
+          maxHeight: 600,
+          imageQuality: 85,
         );
 
         if (pickedFile == null) {
@@ -190,17 +316,12 @@ class _ProfilePageState extends State<ProfilePage> {
           return;
         }
 
-        // Use a unique avatar URL with timestamp
-        final firstName = _firstNameController.text.isNotEmpty
-            ? _firstNameController.text
-            : 'User';
-        final lastName =
-            _lastNameController.text.isNotEmpty ? _lastNameController.text : '';
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        // Read the image file as bytes and convert to base64
+        final bytes = await pickedFile.readAsBytes();
+        final base64Image = base64Encode(bytes);
 
-        // Add timestamp to make the URL unique so browser won't cache old images
-        profilePictureUrl =
-            "https://ui-avatars.com/api/?name=$firstName+$lastName&background=random&color=fff&size=200&t=$timestamp";
+        // Create base64 data URI
+        profilePictureUrl = 'data:image/jpeg;base64,$base64Image';
       }
 
       // Create a profileService
@@ -217,37 +338,64 @@ class _ProfilePageState extends State<ProfilePage> {
         },
       );
 
-      // Upload the URL instead of the base64 image
+      // Cache profile picture locally first for immediate feedback
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_photo', profilePictureUrl);
+      await UserCacheService.cacheProfilePicture(profilePictureUrl);
+
+      // Update the local state with the new image
+      setState(() {
+        _cachedProfilePicture = profilePictureUrl;
+        if (_profile != null) {
+          _profile = UserProfile(
+            id: _profile!.id,
+            firstName: _profile!.firstName,
+            lastName: _profile!.lastName,
+            email: _profile!.email,
+            country: _profile!.country,
+            firstLanguage: _profile!.firstLanguage,
+            profilePicture: profilePictureUrl,
+            reasonToLearn: _profile!.reasonToLearn,
+            languagesToLearn: _profile!.languagesToLearn,
+            dailyReminders: _profile!.dailyReminders,
+            dailyGoalMinutes: _profile!.dailyGoalMinutes,
+            preferredLearningTime: _profile!.preferredLearningTime,
+          );
+        }
+      });
+
+      // Upload the URL to the server
       await profileService.updateProfilePicture(profilePictureUrl);
 
       // Force clear any image cache
-      imageCache.clear();
-      imageCache.clearLiveImages();
-
-      // Refresh profile data
-      await _fetchProfile();
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
 
       // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Profile picture updated successfully!'),
-            backgroundColor: Theme.of(context).primaryColor,
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
+      print('Error updating profile picture: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating profile picture: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update profile picture: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
     }
   }
@@ -412,110 +560,7 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           children: [
             // Profile header with avatar
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: themeProvider.isDarkMode
-                      ? [
-                          themeProvider.primaryColor.withOpacity(0.8),
-                          themeProvider.secondaryColor.withOpacity(0.6)
-                        ]
-                      : [
-                          themeProvider.primaryColor,
-                          themeProvider.secondaryColor
-                        ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                        ),
-                        child: Hero(
-                          tag: 'dashboardProfilePicture',
-                          child: ProfileImageHelper.buildProfileAvatar(
-                            imageUrl: profile.profilePicture,
-                            radius: 60,
-                            backgroundColor: Colors.white24,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: GestureDetector(
-                          onTap: _changeProfilePicture,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: themeProvider.accentColor,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.camera_alt,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    // Show full name from text controllers for consistency
-                    '${_firstNameController.text} ${_lastNameController.text}'
-                        .trim(),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Show email or alternative text if not available
-                  Text(
-                    _usernameController.text.isNotEmpty
-                        ? _usernameController.text
-                        : 'No email provided',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
+            _buildProfileHeader(themeProvider),
 
             const SizedBox(height: 24),
 
@@ -539,6 +584,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   _buildAchievementsCard(profile),
 
                   const SizedBox(height: 24),
+
+                  // Learning Time Section
+                  _buildLearningTimeSection(themeProvider),
 
                   // Save Button
                   SizedBox(
@@ -577,6 +625,124 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   const SizedBox(height: 32),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(ThemeProvider themeProvider) {
+    // Get profile picture URL or fallback
+    String? profilePictureUrl;
+    if (_profile != null &&
+        _profile!.profilePicture != null &&
+        _profile!.profilePicture!.isNotEmpty) {
+      profilePictureUrl = _profile!.profilePicture;
+      print(
+          'Using profile picture from profile: ${profilePictureUrl!.substring(0, math.min(30, profilePictureUrl.length))}...');
+    } else if (_cachedProfilePicture != null &&
+        _cachedProfilePicture!.isNotEmpty) {
+      // Try to get from cache
+      profilePictureUrl = _cachedProfilePicture;
+      print(
+          'Using cached profile picture: ${profilePictureUrl!.substring(0, math.min(30, profilePictureUrl.length))}...');
+    } else {
+      // Generate a default avatar as fallback
+      final firstName = _firstNameController.text.isNotEmpty
+          ? _firstNameController.text
+          : 'User';
+      final lastName =
+          _lastNameController.text.isNotEmpty ? _lastNameController.text : '';
+      profilePictureUrl =
+          "https://ui-avatars.com/api/?name=$firstName+$lastName&background=random&color=fff&size=200";
+      print('Using generated avatar as fallback');
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      decoration: BoxDecoration(
+        color: themeProvider.primaryColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Column(
+          children: [
+            // Profile picture with tap handler to change it
+            GestureDetector(
+              onTap: _isLoading ? null : _changeProfilePicture,
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: _isLoading
+                        ? ProfileImageHelper.buildProfileAvatar(
+                            imageUrl: null,
+                            radius: 60,
+                            showLoading: true,
+                          )
+                        : Hero(
+                            tag: 'profilePicture',
+                            child: ProfileImageHelper.buildProfileAvatar(
+                              imageUrl: profilePictureUrl,
+                              radius: 60,
+                              backgroundColor: Colors.white.withOpacity(0.2),
+                              iconColor: Colors.white,
+                            ),
+                          ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: themeProvider.accentColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _firstNameController.text + ' ' + _lastNameController.text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _usernameController.text,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 16,
               ),
             ),
           ],
@@ -1036,6 +1202,141 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLearningTimeSection(ThemeProvider themeProvider) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Card(
+        elevation: 2,
+        color: themeProvider.cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Learning Statistics',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.textColor,
+                    ),
+                  ),
+                  Icon(
+                    Icons.timer,
+                    color: themeProvider.primaryColor,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Today's learning time
+              _buildLearningTimeRow(
+                'Today',
+                _formatTime(_learningTime['today'] ?? 0),
+                (_learningTime['today'] ?? 0) / 3600,
+                themeProvider,
+              ),
+              const SizedBox(height: 16),
+
+              // This week's learning time
+              _buildLearningTimeRow(
+                'This Week',
+                _formatTime(_learningTime['week'] ?? 0),
+                (_learningTime['week'] ?? 0) / 21600,
+                themeProvider,
+              ),
+              const SizedBox(height: 16),
+
+              // This month's learning time
+              _buildLearningTimeRow(
+                'This Month',
+                _formatTime(_learningTime['month'] ?? 0),
+                (_learningTime['month'] ?? 0) / 86400,
+                themeProvider,
+              ),
+              const SizedBox(height: 16),
+
+              // Total learning time
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total Learning Time',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.textColor,
+                    ),
+                  ),
+                  Text(
+                    _formatTime(_learningTime['total'] ?? 0),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.accentColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Keep learning consistently to improve your language skills!',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                  color: themeProvider.lightTextColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLearningTimeRow(String label, String value, double progress,
+      ThemeProvider themeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                color: themeProvider.textColor,
+              ),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: themeProvider.primaryColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        LinearProgressIndicator(
+          value: progress.clamp(0.0, 1.0), // Ensure value is between 0 and 1
+          backgroundColor: themeProvider.dividerColor,
+          color: themeProvider.primaryColor,
+          minHeight: 6,
+          borderRadius: BorderRadius.circular(3),
+        ),
+      ],
     );
   }
 

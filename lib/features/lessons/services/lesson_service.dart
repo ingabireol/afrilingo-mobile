@@ -403,32 +403,102 @@ class LessonService {
   Future<void> _trackLessonAccess(int lessonId) async {
     try {
       final headers = await _getHeaders();
-
-      // Try to update user progress by recording lesson access
-      try {
-        // The backend now uses query parameter instead of JSON body
-        final accessUri =
-            Uri.parse('$baseUrl/progress/lesson/access?lessonId=$lessonId');
-
-        final response = await http
-            .post(
-              accessUri,
-              headers: headers,
-            )
-            .timeout(const Duration(seconds: 5));
-
-        print('Lesson access recorded: ${response.statusCode}');
-        if (response.statusCode == 200) {
-          print('Lesson access data: ${response.body}');
-        }
-      } catch (e) {
-        print('Error recording lesson access: $e');
-      }
-
-      // Update local streak since the user accessed content today
-      _updateLocalStreak();
+      await http.post(
+        Uri.parse('$baseUrl/progress/lessons/$lessonId/access'),
+        headers: headers,
+      );
     } catch (e) {
-      print('Error in _trackLessonAccess: $e');
+      // Non-critical error, just log it
+      print('Error tracking lesson access: $e');
+    }
+  }
+
+  // Check if a lesson has been completed
+  Future<bool> isLessonCompleted(int lessonId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/progress/lessons/$lessonId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final dynamic responseData = json.decode(response.body);
+        if (responseData is Map<String, dynamic>) {
+          // Check for different response formats
+          if (responseData.containsKey('completed')) {
+            return responseData['completed'] == true;
+          } else if (responseData.containsKey('data') &&
+              responseData['data'] is Map<String, dynamic> &&
+              responseData['data'].containsKey('completed')) {
+            return responseData['data']['completed'] == true;
+          } else if (responseData.containsKey('status')) {
+            return responseData['status'] == 'COMPLETED';
+          }
+        }
+        // If we couldn't determine completion status, assume not completed
+        return false;
+      } else if (response.statusCode == 404) {
+        // Lesson not found in progress, so not completed
+        return false;
+      } else {
+        // In case of error, don't block the user, assume they can proceed
+        print(
+            'Error checking lesson completion: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      // In case of error, assume lesson is not completed
+      print('Error checking lesson completion: $e');
+      return false;
+    }
+  }
+
+  // Check if a quiz has been completed
+  Future<bool> isQuizCompleted(int lessonId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/progress/quizzes/lesson/$lessonId'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final dynamic responseData = json.decode(response.body);
+        if (responseData is Map<String, dynamic>) {
+          // Check for different response formats
+          if (responseData.containsKey('completed')) {
+            return responseData['completed'] == true;
+          } else if (responseData.containsKey('data') &&
+              responseData['data'] is Map<String, dynamic> &&
+              responseData['data'].containsKey('completed')) {
+            return responseData['data']['completed'] == true;
+          } else if (responseData.containsKey('passed')) {
+            return responseData['passed'] == true;
+          } else if (responseData.containsKey('status')) {
+            return responseData['status'] == 'PASSED' ||
+                responseData['status'] == 'COMPLETED';
+          }
+        }
+        // If we couldn't determine completion status, assume not completed
+        return false;
+      } else if (response.statusCode == 404) {
+        // Quiz not found in progress, so not completed
+        return false;
+      } else {
+        // In case of error, don't block the user, assume they can proceed
+        print(
+            'Error checking quiz completion: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      // In case of error, assume quiz is not completed
+      print('Error checking quiz completion: $e');
+      return false;
     }
   }
 

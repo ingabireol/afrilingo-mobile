@@ -22,6 +22,7 @@ dependencies:
   animated_text_kit: ^4.2.2
   google_sign_in: ^6.1.6
   cached_network_image: ^3.4.1
+  intl: ^0.20.2
   # Added percent_indicator package
   # Add other dependencies here
 

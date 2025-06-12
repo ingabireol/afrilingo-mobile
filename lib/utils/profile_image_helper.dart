@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 
 /// Helper utility for handling profile images consistently throughout the app
 class ProfileImageHelper {
@@ -101,18 +102,49 @@ class ProfileImageHelper {
       );
     }
 
-    final imageProvider = getProfileImageProvider(imageUrl);
+    final validImageUrl = getValidProfileImageUrl(imageUrl);
 
-    // If we have a valid image provider, use it
-    if (imageProvider != null) {
-      return CircleAvatar(
-        radius: radius,
-        backgroundColor: backgroundColor,
-        backgroundImage: imageProvider,
-        onBackgroundImageError: (exception, stackTrace) {
-          print('Error loading profile image: $exception');
-        },
-      );
+    // If image URL is valid, use CachedNetworkImage for better reliability
+    if (validImageUrl != null) {
+      if (validImageUrl.startsWith('data:image')) {
+        try {
+          // Extract the base64 part
+          final base64String = validImageUrl.split(',')[1];
+          final bytes = base64Decode(base64String);
+
+          return CircleAvatar(
+            radius: radius,
+            backgroundColor: backgroundColor,
+            backgroundImage: MemoryImage(bytes),
+          );
+        } catch (e) {
+          print('Error rendering base64 profile image: $e');
+          // Fall through to default avatar
+        }
+      } else {
+        // Use CachedNetworkImage for network images
+        return CircleAvatar(
+          radius: radius,
+          backgroundColor: backgroundColor,
+          child: ClipOval(
+            child: CachedNetworkImage(
+              imageUrl: validImageUrl,
+              width: radius * 2,
+              height: radius * 2,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => CircularProgressIndicator(
+                strokeWidth: 2,
+                color: iconColor,
+              ),
+              errorWidget: (context, url, error) => Icon(
+                Icons.person,
+                size: radius,
+                color: iconColor.withOpacity(0.9),
+              ),
+            ),
+          ),
+        );
+      }
     }
 
     // Fallback for no image

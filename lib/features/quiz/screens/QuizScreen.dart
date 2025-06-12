@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:afrilingo/core/theme/theme_provider.dart';
 import '../models/quiz.dart';
 import '../../lessons/services/lesson_service.dart';
+import 'dart:async';
 
 // Keeping these as fallback colors
 const Color kPrimaryColor = Color(0xFF8B4513); // Brown
@@ -132,10 +133,21 @@ class _QuizScreenState extends State<QuizScreen> {
   QuizResult? _quizResult;
   int? _selectedOptionId;
 
+  // Timer-related variables
+  Timer? _quizTimer;
+  int _remainingSeconds = 300; // 5 minutes
+  bool _timerExpired = false;
+
   @override
   void initState() {
     super.initState();
     _loadQuiz();
+  }
+
+  @override
+  void dispose() {
+    _quizTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadQuiz() async {
@@ -143,6 +155,8 @@ class _QuizScreenState extends State<QuizScreen> {
       setState(() {
         _isLoading = true;
         _error = null;
+        _timerExpired = false;
+        _remainingSeconds = 300; // Reset timer to 5 minutes
       });
 
       final quiz = await _lessonService.getQuizForLesson(widget.lessonId);
@@ -150,6 +164,9 @@ class _QuizScreenState extends State<QuizScreen> {
         _quiz = quiz;
         _isLoading = false;
       });
+
+      // Start the timer when quiz loads
+      _startQuizTimer();
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -158,8 +175,104 @@ class _QuizScreenState extends State<QuizScreen> {
     }
   }
 
+  void _startQuizTimer() {
+    _quizTimer?.cancel();
+
+    _quizTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          if (_remainingSeconds > 0) {
+            _remainingSeconds--;
+          } else {
+            _timerExpired = true;
+            _quizTimer?.cancel();
+            _showTimeUpDialog();
+          }
+        });
+      }
+    });
+  }
+
+  void _showTimeUpDialog() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            'Time\'s Up!',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: themeProvider.primaryColor,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.timer_off,
+                size: 48,
+                color: Colors.orange,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'You\'ve run out of time for this quiz.',
+                style: TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Would you like to try again or go back to the lesson?',
+                style: TextStyle(fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.pop(context, false); // Go back to lesson
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: themeProvider.textColor,
+              ),
+              child: const Text('Back to Lesson'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                _resetQuiz(); // Reset and restart the quiz
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeProvider.primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Try Again'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _resetQuiz() {
+    setState(() {
+      _currentQuestionIndex = 0;
+      _answers = [];
+      _quizCompleted = false;
+      _quizResult = null;
+      _selectedOptionId = null;
+      _timerExpired = false;
+      _remainingSeconds = 150; // Reset to 5 minutes
+    });
+    _startQuizTimer();
+  }
+
   void _submitQuizAnswer() {
-    if (_quiz == null || _selectedOptionId == null) return;
+    if (_quiz == null || _selectedOptionId == null || _timerExpired) return;
 
     HapticFeedback.lightImpact();
 
@@ -185,6 +298,9 @@ class _QuizScreenState extends State<QuizScreen> {
 
   Future<void> _submitQuiz() async {
     if (_quiz == null) return;
+
+    // Cancel timer when quiz is submitted
+    _quizTimer?.cancel();
 
     try {
       setState(() {
@@ -310,6 +426,16 @@ class _QuizScreenState extends State<QuizScreen> {
         ],
       ),
     );
+  }
+
+  void _completeQuiz() {
+    if (widget.isLevelProgressionMode) {
+      // For level progression mode, just go back to level selection
+      Navigator.of(context).pop();
+    } else {
+      // For regular lesson mode, go back to the lesson screen with completion status
+      Navigator.of(context).pop(_quizResult?.passed == true);
+    }
   }
 
   void _restartQuiz() {
@@ -728,19 +854,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () {
-                          // Check which mode we're in
-                          if (widget.isLevelProgressionMode) {
-                            // Return the score to the level selection screen
-                            Navigator.pop(context, {
-                              'score': _quizResult!.score,
-                              'passed': _quizResult!.passed,
-                            });
-                          } else {
-                            // Original behavior for normal learning flow
-                            Navigator.pop(context);
-                          }
-                        },
+                        onPressed: _completeQuiz,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: themeProvider.primaryColor,
                           side: BorderSide(color: themeProvider.primaryColor),
@@ -789,16 +903,52 @@ class _QuizScreenState extends State<QuizScreen> {
             'Question ${_currentQuestionIndex + 1}/${_quiz!.questions.length}'),
         backgroundColor: themeProvider.primaryColor,
         foregroundColor: Colors.white,
+        actions: [
+          // Timer display in app bar
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Center(
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.timer,
+                    color: _remainingSeconds < 60 ? Colors.red : Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${(_remainingSeconds ~/ 60).toString().padLeft(2, '0')}:${(_remainingSeconds % 60).toString().padLeft(2, '0')}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: _remainingSeconds < 60 ? Colors.red : Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // Progress indicator
+            // Timer progress indicator
+            LinearProgressIndicator(
+              value: _remainingSeconds / 300, // 300 seconds total
+              backgroundColor: themeProvider.dividerColor,
+              color: _remainingSeconds < 60
+                  ? Colors.red
+                  : (_remainingSeconds < 120
+                      ? Colors.orange
+                      : themeProvider.primaryColor),
+              minHeight: 6,
+            ),
+            // Progress indicator for questions
             LinearProgressIndicator(
               value: (_currentQuestionIndex + 1) / _quiz!.questions.length,
               backgroundColor: themeProvider.dividerColor,
               color: themeProvider.primaryColor,
-              minHeight: 6,
+              minHeight: 3,
             ),
             Expanded(
               child: SingleChildScrollView(

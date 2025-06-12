@@ -10,12 +10,12 @@ import 'package:afrilingo/utils/profile_image_helper.dart';
 import 'package:afrilingo/features/lessons/services/lesson_service.dart';
 import 'package:provider/provider.dart';
 import 'package:afrilingo/core/theme/theme_provider.dart';
+import 'package:intl/intl.dart';
 
 import 'package:afrilingo/features/auth/widgets/navigation_bar.dart';
 import 'package:afrilingo/features/dashboard/screens/activity.dart';
 import 'package:afrilingo/features/courses/screens/courses.dart';
 import 'package:afrilingo/features/chat/screens/chatbotScreenState.dart';
-import 'package:afrilingo/features/language/screens/language_selection_screen.dart';
 import 'package:afrilingo/features/profile/services/profile_service.dart';
 import 'package:afrilingo/features/chat/screens/translating.dart';
 import 'package:afrilingo/features/auth/screens/sign_in_screen.dart';
@@ -53,6 +53,19 @@ class _UserDashboardState extends State<UserDashboard>
   Timer? _refreshTimer;
   DateTime? _lastRefreshTime;
   bool _loadingStreak = false; // Track when streak is being loaded
+
+  // Learning time tracking
+  Map<String, int> _learningTime = {
+    'today': 0,
+    'week': 0,
+    'month': 0,
+    'total': 0,
+  };
+  Timer? _learningTimeTimer;
+  Timer? _learningTimeDisplayTimer;
+  bool _isUserActive = true;
+  DateTime? _lastActivityTime;
+  int _tempSeconds = 0; // For smooth display of seconds
 
   // Dashboard data
   Map<String, dynamic>? _dashboardData;
@@ -98,16 +111,33 @@ class _UserDashboardState extends State<UserDashboard>
       }
     });
 
+    // Load learning time data
+    _loadLearningTimeData();
+
+    // Start learning time tracker
+    _startLearningTimeTracker();
+
+    // Start display timer for smooth second-by-second updates
+    _startDisplayTimer();
+
     // Record initial refresh time
     _lastRefreshTime = DateTime.now();
+
+    // Record initial activity time
+    _lastActivityTime = DateTime.now();
   }
 
   @override
   void dispose() {
+    // Save learning time before disposing
+    _saveLearningTimeData();
+
     // Remove observer when widget is disposed
     WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
     _refreshTimer?.cancel();
+    _learningTimeTimer?.cancel();
+    _learningTimeDisplayTimer?.cancel();
     super.dispose();
   }
 
@@ -121,6 +151,20 @@ class _UserDashboardState extends State<UserDashboard>
         // App was in background for more than a minute, refresh data
         _refreshData(showIndicator: false);
       }
+
+      // Resume learning time tracking
+      setState(() {
+        _isUserActive = true;
+        _lastActivityTime = now;
+      });
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      // Pause learning time tracking and save data
+      setState(() {
+        _isUserActive = false;
+      });
+      _saveLearningTimeData();
     }
   }
 
@@ -595,6 +639,9 @@ class _UserDashboardState extends State<UserDashboard>
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
+    // Update last activity time whenever user interacts with the app
+    _lastActivityTime = DateTime.now();
+
     return Scaffold(
       backgroundColor: themeProvider.backgroundColor,
       appBar: AppBar(
@@ -692,6 +739,10 @@ class _UserDashboardState extends State<UserDashboard>
                   // Features section
                   _buildFeaturesSection(themeProvider),
                   const SizedBox(height: 24),
+
+                  // Learning time section (moved to bottom)
+                  _buildLearningTimeSection(themeProvider),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -737,31 +788,77 @@ class _UserDashboardState extends State<UserDashboard>
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            // Profile picture if available, otherwise show initial
-            _cachedProfilePicture != null && _cachedProfilePicture!.isNotEmpty
-                ? Hero(
-                    tag: 'dashboardProfilePicture',
-                    child: ProfileImageHelper.buildProfileAvatar(
+            // Profile picture widget with better error handling
+            Hero(
+              tag: 'profilePicture',
+              child: GestureDetector(
+                onTap: () {
+                  // Show a larger version of the profile picture when tapped
+                  if (_cachedProfilePicture != null &&
+                      _cachedProfilePicture!.isNotEmpty) {
+                    showDialog(
+                      context: context,
+                      builder: (context) => Dialog(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ProfileImageHelper.buildProfileAvatar(
+                              imageUrl: _cachedProfilePicture,
+                              radius: 100,
+                              backgroundColor:
+                                  themeProvider.primaryColor.withOpacity(0.2),
+                              iconColor: themeProvider.primaryColor,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              displayName,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: themeProvider.textColor,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text('Close'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Stack(
+                  children: [
+                    // Main profile image or fallback
+                    ProfileImageHelper.buildProfileAvatar(
                       imageUrl: _cachedProfilePicture,
                       radius: 30,
                       backgroundColor: Colors.white.withOpacity(0.2),
                       iconColor: Colors.white,
                     ),
-                  )
-                : CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white.withOpacity(0.2),
-                    child: Text(
-                      displayName.isNotEmpty
-                          ? displayName[0].toUpperCase()
-                          : 'A',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    // Small edit indicator
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.edit,
+                          size: 12,
+                          color: themeProvider.primaryColor,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(width: 16),
 
             // Welcome text
@@ -822,6 +919,170 @@ class _UserDashboardState extends State<UserDashboard>
                     ),
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLearningTimeSection(ThemeProvider themeProvider) {
+    return Card(
+      elevation: 2,
+      color: themeProvider.cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Learning Time',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.textColor,
+                  ),
+                ),
+                Icon(
+                  Icons.timer,
+                  color: themeProvider.primaryColor,
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Today's learning time
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Today',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: themeProvider.textColor,
+                  ),
+                ),
+                Text(
+                  _formatTime(_learningTime['today'] ?? 0),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: (_learningTime['today'] ?? 0) /
+                  3600, // Target: 1 hour per day
+              backgroundColor: themeProvider.dividerColor,
+              color: themeProvider.primaryColor,
+              minHeight: 6,
+              borderRadius: BorderRadius.circular(3),
+            ),
+            const SizedBox(height: 16),
+
+            // This week's learning time
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'This Week',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: themeProvider.textColor,
+                  ),
+                ),
+                Text(
+                  _formatTime(_learningTime['week'] ?? 0),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: (_learningTime['week'] ?? 0) /
+                  21600, // Target: 6 hours per week
+              backgroundColor: themeProvider.dividerColor,
+              color: themeProvider.primaryColor,
+              minHeight: 6,
+              borderRadius: BorderRadius.circular(3),
+            ),
+            const SizedBox(height: 16),
+
+            // This month's learning time
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'This Month',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: themeProvider.textColor,
+                  ),
+                ),
+                Text(
+                  _formatTime(_learningTime['month'] ?? 0),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.primaryColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: (_learningTime['month'] ?? 0) /
+                  86400, // Target: 24 hours per month
+              backgroundColor: themeProvider.dividerColor,
+              color: themeProvider.primaryColor,
+              minHeight: 6,
+              borderRadius: BorderRadius.circular(3),
+            ),
+            const SizedBox(height: 16),
+
+            // Total learning time
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total Learning Time',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.textColor,
+                  ),
+                ),
+                Text(
+                  _formatTime(_learningTime['total'] ?? 0),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.accentColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Keep learning consistently to improve your language skills!',
+              style: TextStyle(
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                color: themeProvider.lightTextColor,
               ),
             ),
           ],
@@ -1872,6 +2133,166 @@ class _UserDashboardState extends State<UserDashboard>
         );
       },
     );
+  }
+
+  // Start display timer for smooth second-by-second updates
+  void _startDisplayTimer() {
+    _learningTimeDisplayTimer =
+        Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || !_isUserActive) return;
+
+      setState(() {
+        // Increment temp counter for display purposes
+        _tempSeconds++;
+
+        // Also update the real counters
+        _learningTime['today'] = (_learningTime['today'] ?? 0) + 1;
+        _learningTime['week'] = (_learningTime['week'] ?? 0) + 1;
+        _learningTime['month'] = (_learningTime['month'] ?? 0) + 1;
+        _learningTime['total'] = (_learningTime['total'] ?? 0) + 1;
+      });
+
+      // Save data every minute
+      if (_tempSeconds % 60 == 0) {
+        _saveLearningTimeData();
+      }
+    });
+  }
+
+  // Start learning time tracker - now just saves data every minute
+  void _startLearningTimeTracker() {
+    _learningTimeTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (!mounted || !_isUserActive) return;
+
+      final now = DateTime.now();
+
+      // Only update time if user has been active in the last 2 minutes
+      if (_lastActivityTime != null &&
+          now.difference(_lastActivityTime!).inMinutes < 2) {
+        // Save time data every minute
+        _saveLearningTimeData();
+      }
+    });
+  }
+
+  // Load learning time data from SharedPreferences
+  Future<void> _loadLearningTimeData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Get user ID for user-specific time tracking
+      final userId = await UserCacheService.getCachedUserId();
+      final userIdStr = userId != null ? userId.toString() : 'default';
+
+      // Get the app-wide learning time key
+      const String timeTrackingKey = 'app_learning_time';
+
+      setState(() {
+        _learningTime = {
+          'today': prefs.getInt('${timeTrackingKey}_today_$userIdStr') ?? 0,
+          'week': prefs.getInt('${timeTrackingKey}_week_$userIdStr') ?? 0,
+          'month': prefs.getInt('${timeTrackingKey}_month_$userIdStr') ?? 0,
+          'total': prefs.getInt('${timeTrackingKey}_total_$userIdStr') ?? 0,
+        };
+
+        // Initialize temp seconds counter to match total
+        _tempSeconds = 0;
+      });
+
+      // Check if we need to reset daily/weekly/monthly counters
+      final lastReset = DateTime.fromMillisecondsSinceEpoch(
+          prefs.getInt('${timeTrackingKey}_last_reset_$userIdStr') ??
+              DateTime.now().millisecondsSinceEpoch);
+
+      final now = DateTime.now();
+
+      // Reset daily counter if it's a new day
+      if (lastReset.day != now.day ||
+          lastReset.month != now.month ||
+          lastReset.year != now.year) {
+        setState(() {
+          _learningTime['today'] = 0;
+        });
+      }
+
+      // Reset weekly counter if it's a new week
+      final lastResetWeekday = lastReset.weekday;
+      final nowWeekday = now.weekday;
+      if (now.difference(lastReset).inDays >= 7 ||
+          (nowWeekday < lastResetWeekday &&
+              now.difference(lastReset).inDays >= 1)) {
+        setState(() {
+          _learningTime['week'] = 0;
+        });
+      }
+
+      // Reset monthly counter if it's a new month
+      if (lastReset.month != now.month || lastReset.year != now.year) {
+        setState(() {
+          _learningTime['month'] = 0;
+        });
+      }
+
+      // Save the current reset time
+      await prefs.setInt('${timeTrackingKey}_last_reset_$userIdStr',
+          now.millisecondsSinceEpoch);
+    } catch (e) {
+      print('Error loading learning time data: $e');
+    }
+  }
+
+  // Save learning time data to SharedPreferences
+  Future<void> _saveLearningTimeData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Get user ID for user-specific time tracking
+      final userId = await UserCacheService.getCachedUserId();
+      final userIdStr = userId != null ? userId.toString() : 'default';
+
+      // Use a consistent key prefix for all app components
+      const String timeTrackingKey = 'app_learning_time';
+
+      await prefs.setInt(
+          '${timeTrackingKey}_today_$userIdStr', _learningTime['today']!);
+      await prefs.setInt(
+          '${timeTrackingKey}_week_$userIdStr', _learningTime['week']!);
+      await prefs.setInt(
+          '${timeTrackingKey}_month_$userIdStr', _learningTime['month']!);
+      await prefs.setInt(
+          '${timeTrackingKey}_total_$userIdStr', _learningTime['total']!);
+      await prefs.setInt('${timeTrackingKey}_last_reset_$userIdStr',
+          DateTime.now().millisecondsSinceEpoch);
+
+      // Also save to the original keys for backward compatibility
+      await prefs.setInt(
+          'learning_time_today_$userIdStr', _learningTime['today']!);
+      await prefs.setInt(
+          'learning_time_week_$userIdStr', _learningTime['week']!);
+      await prefs.setInt(
+          'learning_time_month_$userIdStr', _learningTime['month']!);
+      await prefs.setInt(
+          'learning_time_total_$userIdStr', _learningTime['total']!);
+    } catch (e) {
+      print('Error saving learning time data: $e');
+    }
+  }
+
+  // Format seconds into readable time
+  String _formatTime(int seconds) {
+    if (seconds < 60) {
+      return '$seconds sec';
+    } else if (seconds < 3600) {
+      return '${(seconds / 60).floor()} min';
+    } else if (seconds < 86400) {
+      final hours = (seconds / 3600).floor();
+      final minutes = ((seconds % 3600) / 60).floor();
+      return '$hours h ${minutes > 0 ? '$minutes m' : ''}';
+    } else {
+      final days = (seconds / 86400).floor();
+      final hours = ((seconds % 86400) / 3600).floor();
+      return '$days d ${hours > 0 ? '$hours h' : ''}';
+    }
   }
 }
 
