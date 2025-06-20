@@ -23,6 +23,10 @@ dependencies:
   google_sign_in: ^6.1.6
   cached_network_image: ^3.4.1
   intl: ^0.20.2
+  camera: ^0.10.5+5
+  permission_handler: ^11.0.1
+  url_launcher: ^6.2.1
+  share_plus: ^10.1.3
   # Added percent_indicator package
   # Add other dependencies here
 
