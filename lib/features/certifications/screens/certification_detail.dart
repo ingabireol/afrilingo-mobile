@@ -1,3 +1,8 @@
+import 'package:afrilingo/features/certifications/models/certification_models.dart';
+import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 class CertificateDetailScreen extends StatelessWidget {
   final Certificate certificate;
 
@@ -287,7 +292,7 @@ class CertificateDetailScreen extends StatelessWidget {
       try {
         final Uri url = Uri.parse(certificate.certificateUrl!);
         if (await canLaunchUrl(url)) {
-          await launchUrl(url, mode: LaunchMode.externalBrowser);
+          await launchUrl(url, mode: LaunchMode.externalApplication);
         }
       } catch (e) {
         _showError(context, 'Error opening verification page: $e');

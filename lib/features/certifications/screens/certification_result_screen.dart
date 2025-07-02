@@ -1,4 +1,5 @@
 // certification_result_screen.dart
+import 'package:afrilingo/features/certifications/models/certification_models.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
